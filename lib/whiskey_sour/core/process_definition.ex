@@ -77,6 +77,10 @@ defmodule WhiskeySour.Core.ProcessDefinition do
           gateways: [gateway()],
           sequence_flows: [sequence_flow()]
         }
+  @type t :: process_definition()
+
+  @enforce_keys ~w(id name activities events gateways sequence_flows)a
+  defstruct ~w(id name activities events gateways sequence_flows)a
 
   @doc """
   Creates a new process definition.
@@ -93,7 +97,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
   ## Example
 
       iex> ProcessDefinition.new("order_process", "Order Processing")
-      %{
+      %ProcessDefinition{
         id: "order_process",
         name: "Order Processing",
         activities: [],
@@ -103,7 +107,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       }
   """
   def new(id, name) do
-    %{
+    %__MODULE__{
       id: id,
       name: name,
       activities: [],
@@ -129,7 +133,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       iex> process = ProcessDefinition.new("order_process", "Order Processing")
       iex> activity = %{id: "review_order", type: :user_task, name: "Review Order", assignee: "user1"}
       iex> ProcessDefinition.add_activity(process, activity)
-      %{
+      %ProcessDefinition{
         id: "order_process",
         name: "Order Processing",
         activities: [%{id: "review_order", type: :user_task, name: "Review Order", assignee: "user1"}],
@@ -139,7 +143,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       }
   """
   def add_activity(process, activity) do
-    update_in(process[:activities], &[activity | &1])
+    update_in(process, [Access.key!(:activities)], &[activity | &1])
   end
 
   @doc """
@@ -158,7 +162,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       iex> process = ProcessDefinition.new("order_process", "Order Processing")
       iex> event = %{id: "start_event", type: :start_event, name: "Start Event"}
       iex> ProcessDefinition.add_event(process, event)
-      %{
+      %ProcessDefinition{
         id: "order_process",
         name: "Order Processing",
         activities: [],
@@ -168,7 +172,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       }
   """
   def add_event(process, event) do
-    update_in(process[:events], &[event | &1])
+    update_in(process, [Access.key!(:events)], &[event | &1])
   end
 
   @doc """
@@ -188,7 +192,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       iex> process = ProcessDefinition.new("order_process", "Order Processing")
       iex> gateway = %{id: "decision_gateway", type: :exclusive, name: "Decision Gateway"}
       iex> ProcessDefinition.add_gateway(process, gateway)
-      %{
+      %ProcessDefinition{
         id: "order_process",
         name: "Order Processing",
         activities: [],
@@ -198,7 +202,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       }
   """
   def add_gateway(process, gateway) do
-    update_in(process[:gateways], &[gateway | &1])
+    update_in(process, [Access.key!(:gateways)], &[gateway | &1])
   end
 
   @doc """
@@ -218,7 +222,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       iex> |> ProcessDefinition.add_event(%{id: "start_event", type: :start_event, name: "Start Event"})
       iex> sequence_flow = %{id: "flow1", source_ref: "start_event", target_ref: "review_order"}
       iex> ProcessDefinition.add_sequence_flow(process, sequence_flow)
-      %{
+      %ProcessDefinition{
         id: "order_process",
         name: "Order Processing",
         activities: [],
@@ -228,6 +232,6 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       }
   """
   def add_sequence_flow(process, sequence_flow) do
-    update_in(process[:sequence_flows], &[sequence_flow | &1])
+    update_in(process, [Access.key!(:sequence_flows)], &[sequence_flow | &1])
   end
 end
