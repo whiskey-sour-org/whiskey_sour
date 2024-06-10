@@ -1,10 +1,10 @@
-defmodule WhiskeySour.Core.WorkflowDefinition do
+defmodule WhiskeySour.Core.ProcessDefinition do
   @moduledoc """
-  The `WorkflowDefinition` module provides functionality for defining and managing BPMN workflow definitions.
+  The `ProcessDefinition` module provides functionality for defining and managing BPMN process definitions.
 
-  A Workflow Definition specifies the sequence of activities, events, gateways, and other elements that define how a particular business process is to be executed within an organization.
+  A Process Definition specifies the sequence of activities, events, gateways, and other elements that define how a particular business process is to be executed within an organization.
 
-  ## Components of a Workflow Definition
+  ## Components of a Process Definition
 
   - **Activities**: Tasks or work items, such as user tasks, service tasks, and script tasks.
   - **Events**: Occurrences that affect the flow, such as start events, end events, and intermediate events.
@@ -16,7 +16,7 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
 
   ## Example
 
-  A simple order processing workflow might include:
+  A simple order processing process might include:
   - A start event when an order is received.
   - A user task for reviewing the order.
   - An exclusive gateway for decision-making (approve/reject).
@@ -25,12 +25,12 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
 
   ## Functions
 
-  This module provides functions to create and manage workflow definitions.
+  This module provides functions to create and manage process definitions.
 
   """
 
   @typedoc """
-  Represents an activity in the workflow.
+  Represents an activity in the process.
   """
   @type activity :: %{
           id: String.t(),
@@ -40,7 +40,7 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         }
 
   @typedoc """
-  Represents an event in the workflow.
+  Represents an event in the process.
   """
   @type event :: %{
           id: String.t(),
@@ -49,7 +49,7 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         }
 
   @typedoc """
-  Represents a gateway in the workflow.
+  Represents a gateway in the process.
   """
   @type gateway :: %{
           id: String.t(),
@@ -58,7 +58,7 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         }
 
   @typedoc """
-  Represents a sequence flow in the workflow.
+  Represents a sequence flow in the process.
   """
   @type sequence_flow :: %{
           id: String.t(),
@@ -67,9 +67,9 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         }
 
   @typedoc """
-  Represents a workflow definition.
+  Represents a process definition.
   """
-  @type workflow_definition :: %{
+  @type process_definition :: %{
           id: String.t(),
           name: String.t(),
           activities: [activity()],
@@ -79,20 +79,20 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         }
 
   @doc """
-  Creates a new workflow definition.
+  Creates a new process definition.
 
   ## Parameters
 
-  - `id`: The unique identifier for the workflow.
-  - `name`: The name of the workflow.
+  - `id`: The unique identifier for the process.
+  - `name`: The name of the process.
 
   ## Returns
 
-  A new workflow definition struct.
+  A new process definition struct.
 
   ## Example
 
-      iex> WorkflowDefinition.new("order_process", "Order Processing")
+      iex> ProcessDefinition.new("order_process", "Order Processing")
       %{
         id: "order_process",
         name: "Order Processing",
@@ -114,21 +114,21 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
   end
 
   @doc """
-  Adds an activity to the workflow definition.
+  Adds an activity to the process definition.
 
   ## Parameters
 
-  - `workflow`: The workflow definition.
+  - `process`: The process definition.
   - `activity`: The activity to add.
 
   ## Returns
 
-  The updated workflow definition.
+  The updated process definition.
 
   ## Example
-      iex> workflow = WorkflowDefinition.new("order_process", "Order Processing")
+      iex> process = ProcessDefinition.new("order_process", "Order Processing")
       iex> activity = %{id: "review_order", type: :user_task, name: "Review Order", assignee: "user1"}
-      iex> WorkflowDefinition.add_activity(workflow, activity)
+      iex> ProcessDefinition.add_activity(process, activity)
       %{
         id: "order_process",
         name: "Order Processing",
@@ -138,26 +138,26 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         sequence_flows: []
       }
   """
-  def add_activity(workflow, activity) do
-    update_in(workflow[:activities], &[activity | &1])
+  def add_activity(process, activity) do
+    update_in(process[:activities], &[activity | &1])
   end
 
   @doc """
-  Adds an event to the workflow definition.
+  Adds an event to the process definition.
 
   ## Parameters
 
-  - `workflow`: The workflow definition.
+  - `process`: The process definition.
   - `event`: The event to add.
 
   ## Returns
 
-  The updated workflow definition.
+  The updated process definition.
 
   ## Example
-      iex> workflow = WorkflowDefinition.new("order_process", "Order Processing")
+      iex> process = ProcessDefinition.new("order_process", "Order Processing")
       iex> event = %{id: "start_event", type: :start_event, name: "Start Event"}
-      iex> WorkflowDefinition.add_event(workflow, event)
+      iex> ProcessDefinition.add_event(process, event)
       %{
         id: "order_process",
         name: "Order Processing",
@@ -167,27 +167,27 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         sequence_flows: []
       }
   """
-  def add_event(workflow, event) do
-    update_in(workflow[:events], &[event | &1])
+  def add_event(process, event) do
+    update_in(process[:events], &[event | &1])
   end
 
   @doc """
-  Adds a gateway to the workflow definition.
+  Adds a gateway to the process definition.
 
   ## Parameters
 
-  - `workflow`: The workflow definition.
+  - `process`: The process definition.
   - `gateway`: The gateway to add.
 
   ## Returns
 
-  The updated workflow definition.
+  The updated process definition.
 
   ## Example
 
-      iex> workflow = WorkflowDefinition.new("order_process", "Order Processing")
+      iex> process = ProcessDefinition.new("order_process", "Order Processing")
       iex> gateway = %{id: "decision_gateway", type: :exclusive, name: "Decision Gateway"}
-      iex> WorkflowDefinition.add_gateway(workflow, gateway)
+      iex> ProcessDefinition.add_gateway(process, gateway)
       %{
         id: "order_process",
         name: "Order Processing",
@@ -197,27 +197,27 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         sequence_flows: []
       }
   """
-  def add_gateway(workflow, gateway) do
-    update_in(workflow[:gateways], &[gateway | &1])
+  def add_gateway(process, gateway) do
+    update_in(process[:gateways], &[gateway | &1])
   end
 
   @doc """
-  Adds a sequence flow to the workflow definition.
+  Adds a sequence flow to the process definition.
 
   ## Parameters
 
-  - `workflow`: The workflow definition.
+  - `process`: The process definition.
   - `sequence_flow`: The sequence flow to add.
 
   ## Returns
 
-  The updated workflow definition.
+  The updated process definition.
 
   ## Example
-      iex> workflow = WorkflowDefinition.new("order_process", "Order Processing")
-      iex> |> WorkflowDefinition.add_event(%{id: "start_event", type: :start_event, name: "Start Event"})
+      iex> process = ProcessDefinition.new("order_process", "Order Processing")
+      iex> |> ProcessDefinition.add_event(%{id: "start_event", type: :start_event, name: "Start Event"})
       iex> sequence_flow = %{id: "flow1", source_ref: "start_event", target_ref: "review_order"}
-      iex> WorkflowDefinition.add_sequence_flow(workflow, sequence_flow)
+      iex> ProcessDefinition.add_sequence_flow(process, sequence_flow)
       %{
         id: "order_process",
         name: "Order Processing",
@@ -227,7 +227,7 @@ defmodule WhiskeySour.Core.WorkflowDefinition do
         sequence_flows: [%{id: "flow1", source_ref: "start_event", target_ref: "review_order"}]
       }
   """
-  def add_sequence_flow(workflow, sequence_flow) do
-    update_in(workflow[:sequence_flows], &[sequence_flow | &1])
+  def add_sequence_flow(process, sequence_flow) do
+    update_in(process[:sequence_flows], &[sequence_flow | &1])
   end
 end
