@@ -8,21 +8,6 @@ defmodule WhiskeySour.Core.ProcessInstance do
 
   - `tokens`: A list of tokens that represent the current state and progress of the process instance.
   - `definition`: The workflow definition that this process instance is executing.
-
-  ## Example
-
-      iex> definition = ProcessDefinition.new("order_process", "Order Processing")
-      iex> |> ProcessDefinition.add_event(%{id: "start_event", type: :start_event, name: "Start Event"})
-      iex> |> ProcessDefinition.add_activity(%{id: "review_order", type: :user_task, name: "Review Order", assignee: "user1"})
-      iex> |> ProcessDefinition.add_event(%{id: "end_event", type: :end_event, name: "End Event"})
-      iex> |> ProcessDefinition.add_sequence_flow(%{id: "flow1", source_ref: "start_event", target_ref: "review_order"})
-      iex> |> ProcessDefinition.add_sequence_flow(%{id: "flow2", source_ref: "review_order", target_ref: "end_event"})
-      iex> ProcessInstance.construct(definition)
-      %ProcessInstance{
-        tokens: [],
-        definition: definition
-      }
-
   """
 
   alias WhiskeySour.Core.ProcessDefinition
@@ -37,17 +22,28 @@ defmodule WhiskeySour.Core.ProcessInstance do
         }
 
   @typedoc """
+  Represents an event in the process definition.
+  """
+  @type event :: %{
+          id: String.t(),
+          node_id: String.t(),
+          status: :completed | :terminated
+        }
+
+  @typedoc """
   Represents a process instance.
   """
   @type process_instance :: %{
           id: String.t(),
           tokens: [token()],
-          definition: ProcessDefinition.t()
+          definition: ProcessDefinition.t(),
+          uncommitted_events: [event()],
+          committed_events: [event()]
         }
   @type t :: process_instance()
 
-  @enforce_keys [:tokens, :definition]
-  defstruct ~w(tokens definition)a
+  @enforce_keys [:tokens, :definition, :uncommitted_events, :committed_events]
+  defstruct [:tokens, :definition, :uncommitted_events, :committed_events]
 
   @doc """
   Creates a new process instance for the given workflow definition.
@@ -59,28 +55,38 @@ defmodule WhiskeySour.Core.ProcessInstance do
   ## Returns
 
   A new process instance struct.
-
-  ## Example
-
-      iex> definition = %{
-      ...>   id: "order_process",
-      ...>   name: "Order Processing",
-      ...>   activities: [],
-      ...>   events: [],
-      ...>   gateways: [],
-      ...>   sequence_flows: []
-      ...> }
-      iex> ProcessInstance.construct(definition)
-      %ProcessInstance{
-        tokens: [],
-        definition: definition
-      }
   """
   @spec construct(ProcessDefinition.t()) :: t()
   def construct(definition) when is_map(definition) do
     %__MODULE__{
       tokens: [],
-      definition: definition
+      definition: definition,
+      uncommitted_events: [],
+      committed_events: []
     }
+  end
+
+  def start(%{uncommitted_events: [], committed_events: []} = process_instance) do
+    start_event_definition = Enum.find(process_instance.definition.events, &(&1.type == :start_event))
+
+    uncommitted_events = [
+      %{
+        id: "evt:#{start_event_definition.id}:1",
+        node_id: start_event_definition.id,
+        status: :completed
+      }
+    ]
+
+    # find the node after the start event
+    token_node_id =
+      Enum.find(process_instance.definition.sequence_flows, &(&1.source_ref == start_event_definition.id)).target_ref
+
+    token = %{
+      node_id: token_node_id,
+      status: :active,
+      id: "token:1"
+    }
+
+    %{process_instance | uncommitted_events: uncommitted_events, tokens: [token]}
   end
 end
