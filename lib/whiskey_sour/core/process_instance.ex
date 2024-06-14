@@ -89,46 +89,4 @@ defmodule WhiskeySour.Core.ProcessInstance do
 
     %{process_instance | uncommitted_events: uncommitted_events, tokens: [token]}
   end
-
-  def jobs(%{tokens: tokens, definition: definition}) do
-    Enum.map(tokens, fn token ->
-      activity = Enum.find(definition.activities, &(&1.id == token.node_id))
-
-      %{
-        node_id: token.node_id,
-        assignee: activity.assignee,
-        token_id: token.id
-      }
-    end)
-  end
-
-  def complete_job(%{tokens: tokens, definition: definition} = process_instance, token_id) do
-    token = Enum.find(tokens, &(&1.id == token_id))
-
-    activity = Enum.find(definition.activities, &(&1.id == token.node_id))
-
-    # find the node after the start event
-    next_node_id =
-      Enum.find(process_instance.definition.sequence_flows, &(&1.source_ref == activity.id)).target_ref
-
-    uncommitted_events =
-      process_instance.uncommitted_events ++
-        [
-          %{
-            id: "evt:#{activity.id}:1",
-            node_id: activity.id,
-            status: :completed
-          },
-          %{
-            node_id: next_node_id,
-            status: :completed,
-            id: "evt:#{next_node_id}:1"
-          }
-        ]
-
-    token = %{token | status: :terminated, node_id: next_node_id}
-    tokens = Enum.map(tokens, fn t -> if t.id == token_id, do: token, else: t end)
-
-    %{process_instance | tokens: tokens, uncommitted_events: uncommitted_events}
-  end
 end

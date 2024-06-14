@@ -44,49 +44,6 @@ defmodule WhiskeySour.Core.ProcessInstanceTest do
     end
   end
 
-  describe "jobs/1" do
-    test "returns the jobs for the process instance" do
-      process_instance =
-        sample_order_process_definition()
-        |> ProcessInstance.construct()
-        |> ProcessInstance.start()
-
-      jobs = ProcessInstance.jobs(process_instance)
-
-      assert jobs == [
-               %{
-                 node_id: "review_order",
-                 assignee: "user1",
-                 token_id: "token:1"
-               }
-             ]
-    end
-  end
-
-  describe "complete_job/2" do
-    test "completes the job for the given token" do
-      definition = sample_order_process_definition()
-      process_instance = ProcessInstance.construct(definition)
-      process_instance = ProcessInstance.start(process_instance)
-
-      process_instance = ProcessInstance.complete_job(process_instance, "token:1")
-
-      assert process_instance.uncommitted_events == [
-               %{id: "evt:start_event:1", node_id: "start_event", status: :completed},
-               %{id: "evt:review_order:1", node_id: "review_order", status: :completed},
-               %{id: "evt:end_event:1", node_id: "end_event", status: :completed}
-             ]
-
-      assert process_instance.tokens == [
-               %{
-                 id: "token:1",
-                 node_id: "end_event",
-                 status: :terminated
-               }
-             ]
-    end
-  end
-
   def sample_order_process_definition do
     "order_process"
     |> ProcessDefinition.new("Order Processing")
