@@ -54,7 +54,7 @@ defmodule WhiskeySour.Core.ProcessInstanceTest do
       element_id = Keyword.fetch!(args, :element_id)
       element_name = Keyword.get(args, :element_name, :undefined)
 
-      event = %{
+      activating_event = %{
         state: :element_activating,
         element_id: element_id,
         element_instance_key: key,
@@ -63,7 +63,16 @@ defmodule WhiskeySour.Core.ProcessInstanceTest do
         element_type: :start_event
       }
 
-      new_log = [event | log]
+      activated_event = %{
+        state: :element_activated,
+        element_id: element_id,
+        element_instance_key: key,
+        flow_scope_key: process_id,
+        element_name: element_name,
+        element_type: :start_event
+      }
+
+      new_log = [activated_event, activating_event | log]
 
       key
       |> Free.return()
@@ -142,6 +151,15 @@ defmodule WhiskeySour.Core.ProcessInstanceTest do
                element_instance_key: 2,
                flow_scope_key: 1,
                state: :element_activating,
+               element_name: :undefined,
+               element_type: :start_event
+             }
+
+      assert Enum.at(audit_log, 3) == %{
+               element_id: "start_event_42",
+               element_instance_key: 2,
+               flow_scope_key: 1,
+               state: :element_activated,
                element_name: :undefined,
                element_type: :start_event
              }
