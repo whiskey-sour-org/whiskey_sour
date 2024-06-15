@@ -54,25 +54,19 @@ defmodule WhiskeySour.Core.ProcessInstanceTest do
       element_id = Keyword.fetch!(args, :element_id)
       element_name = Keyword.get(args, :element_name, :undefined)
 
-      activating_event = %{
-        state: :element_activating,
-        element_id: element_id,
-        element_instance_key: key,
-        flow_scope_key: process_id,
-        element_name: element_name,
-        element_type: :start_event
-      }
+      reverse_start_events =
+        for state <- Enum.reverse([:activating, :activated, :completing, :completed]) do
+          %{
+            state: :"element_#{state}",
+            element_id: element_id,
+            element_instance_key: key,
+            flow_scope_key: process_id,
+            element_name: element_name,
+            element_type: :start_event
+          }
+        end
 
-      activated_event = %{
-        state: :element_activated,
-        element_id: element_id,
-        element_instance_key: key,
-        flow_scope_key: process_id,
-        element_name: element_name,
-        element_type: :start_event
-      }
-
-      new_log = [activated_event, activating_event | log]
+      new_log = reverse_start_events ++ log
 
       key
       |> Free.return()
@@ -169,6 +163,24 @@ defmodule WhiskeySour.Core.ProcessInstanceTest do
                element_instance_key: 2,
                flow_scope_key: 1,
                state: :element_activated,
+               element_name: :undefined,
+               element_type: :start_event
+             }
+
+      assert Enum.at(audit_log, 4) == %{
+               element_id: "start_event_42",
+               element_instance_key: 2,
+               flow_scope_key: 1,
+               state: :element_completing,
+               element_name: :undefined,
+               element_type: :start_event
+             }
+
+      assert Enum.at(audit_log, 5) == %{
+               element_id: "start_event_42",
+               element_instance_key: 2,
+               flow_scope_key: 1,
+               state: :element_completed,
                element_name: :undefined,
                element_type: :start_event
              }
