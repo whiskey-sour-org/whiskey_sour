@@ -1,3 +1,13 @@
+defmodule WhiskeySour.Core.ProcessInstance.ProcessFunctor do
+  # The Functor representing process operations
+  @moduledoc false
+  defstruct [:operation, :args]
+
+  def new(operation, args \\ []) do
+    %__MODULE__{operation: operation, args: args}
+  end
+end
+
 defmodule WhiskeySour.Core.ProcessInstance do
   @moduledoc """
   The `WhiskeySour.Core.ProcessInstance` module represents an instance of a BPMN workflow process.
@@ -11,6 +21,20 @@ defmodule WhiskeySour.Core.ProcessInstance do
   """
 
   alias WhiskeySour.Core.ProcessDefinition
+  alias WhiskeySour.Core.ProcessInstance.ProcessFunctor
+
+  defmodule Free do
+    @moduledoc false
+    defstruct [:functor, :value]
+
+    def return(value), do: %Free{functor: nil, value: value}
+
+    def lift(fa), do: %Free{functor: fa, value: nil}
+
+    def bind(free, f) do
+      %Free{functor: {:bind, free, f}, value: nil}
+    end
+  end
 
   @typedoc """
   Represents an uncommitted event in the process instance.
@@ -49,8 +73,8 @@ defmodule WhiskeySour.Core.ProcessInstance do
         }
   @type t :: process_instance()
 
-  @enforce_keys [:key, :definition, :uncommitted_events, :committed_events]
-  defstruct [:key, :definition, :uncommitted_events, :committed_events]
+  @enforce_keys [:key, :definition]
+  defstruct [:key, :definition]
 
   @doc """
   Creates a new process instance for the given workflow definition.
@@ -73,52 +97,34 @@ defmodule WhiskeySour.Core.ProcessInstance do
     opts
     |> Keyword.validate!([
       :definition,
-      :key,
-      uncommitted_events: [],
-      committed_events: []
+      :key
     ])
     |> then(&struct!(__MODULE__, &1))
   end
 
-  def start(%{uncommitted_events: [], committed_events: []} = process_instance) do
-    start_event_definition =
-      Enum.find(
-        process_instance.definition.events,
-        fn ->
-          raise "No start event found in process definition"
-        end,
-        &(&1.type == :start_event)
+  # Lifting process operations into the free monad
+  def activate_process(name), do: Free.lift(ProcessFunctor.new(:activate_process, [name]))
+
+  def activate_start_event(args), do: Free.lift(ProcessFunctor.new(:activate_start_event, args))
+
+  def start(opts) do
+    definition = Keyword.fetch!(opts, :definition)
+
+    Free.bind(activate_process(definition.id), fn process_id ->
+      start_event = Enum.find(definition.events, &(&1.type == :start_event))
+      start_event_id = start_event.id
+      start_event_name = Map.get(start_event, :name, :undefined)
+
+      Free.bind(
+        activate_start_event(
+          process_id: process_id,
+          element_id: start_event_id,
+          element_name: start_event_name
+        ),
+        fn _event_id ->
+          Free.return(:ok)
+        end
       )
-
-    process_element_id = process_instance.definition.id
-
-    uncommitted_events = [
-      %{
-        element_id: process_element_id,
-        element_instance_key: process_instance.key,
-        flow_scope_key: :none,
-        state: :element_activating,
-        element_name: :undefined,
-        element_type: :process
-      },
-      %{
-        element_id: process_element_id,
-        element_instance_key: process_instance.key,
-        flow_scope_key: :none,
-        state: :element_activated,
-        element_name: :undefined,
-        element_type: :process
-      },
-      %{
-        element_id: Map.fetch!(start_event_definition, :id),
-        element_instance_key: :todo,
-        flow_scope_key: process_instance.key,
-        state: :element_activating,
-        element_name: Map.get(start_event_definition, :name, :undefined),
-        element_type: :start_event
-      }
-    ]
-
-    %{process_instance | uncommitted_events: uncommitted_events}
+    end)
   end
 end
