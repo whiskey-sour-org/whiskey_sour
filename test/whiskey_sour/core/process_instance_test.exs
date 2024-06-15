@@ -119,6 +119,15 @@ defmodule WhiskeySour.Core.ProcessInstanceTest do
                element_name: "Start Event",
                element_type: :start_event
              }
+
+      assert Enum.at(audit_log, 3) == %{
+               element_id: "start_event_1",
+               element_instance_key: 2,
+               flow_scope_key: 1,
+               state: :element_activated,
+               element_name: "Start Event",
+               element_type: :start_event
+             }
     end
   end
 
