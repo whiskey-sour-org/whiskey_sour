@@ -96,7 +96,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
 
   ## Example
 
-      iex> ProcessDefinition.new("order_process", "Order Processing")
+      iex> ProcessDefinition.new(id: "order_process", name: "Order Processing")
       %ProcessDefinition{
         id: "order_process",
         name: "Order Processing",
@@ -106,15 +106,17 @@ defmodule WhiskeySour.Core.ProcessDefinition do
         sequence_flows: []
       }
   """
-  def new(id, name) do
-    %__MODULE__{
-      id: id,
-      name: name,
+  def new(values) do
+    values
+    |> Keyword.validate!([
+      :id,
+      :name,
       activities: [],
       events: [],
       gateways: [],
       sequence_flows: []
-    }
+    ])
+    |> then(&struct!(__MODULE__, &1))
   end
 
   @doc """
@@ -130,7 +132,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
   The updated process definition.
 
   ## Example
-      iex> process = ProcessDefinition.new("order_process", "Order Processing")
+      iex> process = ProcessDefinition.new(id: "order_process", name: "Order Processing")
       iex> activity = %{id: "review_order", type: :user_task, name: "Review Order", assignee: "user1"}
       iex> ProcessDefinition.add_activity(process, activity)
       %ProcessDefinition{
@@ -159,7 +161,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
   The updated process definition.
 
   ## Example
-      iex> process = ProcessDefinition.new("order_process", "Order Processing")
+      iex> process = ProcessDefinition.new(id: "order_process", name: "Order Processing")
       iex> event = %{id: "start_event", type: :start_event, name: "Start Event"}
       iex> ProcessDefinition.add_event(process, event)
       %ProcessDefinition{
@@ -189,7 +191,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
 
   ## Example
 
-      iex> process = ProcessDefinition.new("order_process", "Order Processing")
+      iex> process = ProcessDefinition.new(id: "order_process", name: "Order Processing")
       iex> gateway = %{id: "decision_gateway", type: :exclusive, name: "Decision Gateway"}
       iex> ProcessDefinition.add_gateway(process, gateway)
       %ProcessDefinition{
@@ -218,7 +220,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
   The updated process definition.
 
   ## Example
-      iex> process = ProcessDefinition.new("order_process", "Order Processing")
+      iex> process = ProcessDefinition.new(id: "order_process", name: "Order Processing")
       iex> |> ProcessDefinition.add_event(%{id: "start_event", type: :start_event, name: "Start Event"})
       iex> sequence_flow = %{id: "flow1", source_ref: "start_event", target_ref: "review_order"}
       iex> ProcessDefinition.add_sequence_flow(process, sequence_flow)

@@ -13,37 +13,44 @@ defmodule WhiskeySour.Core.ProcessInstance do
   alias WhiskeySour.Core.ProcessDefinition
 
   @typedoc """
-  Represents a token in the process instance.
+  Represents an uncommitted event in the process instance.
   """
-  @type token :: %{
-          id: String.t(),
-          node_id: String.t(),
-          status: :active | :completed | :terminated
+  @type uncommitted_event :: %{
+          element_id: String.t(),
+          element_instance_key: String.t(),
+          flow_scope_key: :none | String.t(),
+          state: :element_activating | :element_activated | :element_completing | :element_completed,
+          element_name: String.t() | :undefined,
+          element_type: :process | :start_event | :end_event | :task | :gateway | :sequence_flow
         }
 
   @typedoc """
-  Represents an event in the process definition.
+  Represents an committed event in the process instance.
   """
   @type event :: %{
-          id: String.t(),
-          node_id: String.t(),
-          status: :completed | :terminated
+          element_id: String.t(),
+          element_instance_key: String.t(),
+          flow_scope_key: :none | String.t(),
+          state: :element_activating | :element_activated | :element_completing | :element_completed,
+          element_name: String.t() | :undefined,
+          element_type: :process | :start_event | :end_event | :task | :gateway | :sequence_flow,
+          timestamp: DateTime.t()
         }
 
+  @type process_instance_key :: pos_integer()
   @typedoc """
   Represents a process instance.
   """
   @type process_instance :: %{
-          id: String.t(),
-          tokens: [token()],
+          key: process_instance_key(),
           definition: ProcessDefinition.t(),
-          uncommitted_events: [event()],
+          uncommitted_events: [uncommitted_event()],
           committed_events: [event()]
         }
   @type t :: process_instance()
 
-  @enforce_keys [:tokens, :definition, :uncommitted_events, :committed_events]
-  defstruct [:tokens, :definition, :uncommitted_events, :committed_events]
+  @enforce_keys [:key, :definition, :uncommitted_events, :committed_events]
+  defstruct [:key, :definition, :uncommitted_events, :committed_events]
 
   @doc """
   Creates a new process instance for the given workflow definition.
@@ -56,37 +63,62 @@ defmodule WhiskeySour.Core.ProcessInstance do
 
   A new process instance struct.
   """
-  @spec construct(ProcessDefinition.t()) :: t()
-  def construct(definition) when is_map(definition) do
-    %__MODULE__{
-      tokens: [],
-      definition: definition,
+  @type construct_opts ::
+          keyword(
+            definition: ProcessDefinition.t(),
+            key: process_instance_key()
+          )
+  @spec construct(construct_opts()) :: t()
+  def construct(opts) when is_list(opts) do
+    opts
+    |> Keyword.validate!([
+      :definition,
+      :key,
       uncommitted_events: [],
       committed_events: []
-    }
+    ])
+    |> then(&struct!(__MODULE__, &1))
   end
 
   def start(%{uncommitted_events: [], committed_events: []} = process_instance) do
-    start_event_definition = Enum.find(process_instance.definition.events, &(&1.type == :start_event))
+    start_event_definition =
+      Enum.find(
+        process_instance.definition.events,
+        fn ->
+          raise "No start event found in process definition"
+        end,
+        &(&1.type == :start_event)
+      )
+
+    process_element_id = process_instance.definition.id
 
     uncommitted_events = [
       %{
-        id: "evt:#{start_event_definition.id}:1",
-        node_id: start_event_definition.id,
-        status: :completed
+        element_id: process_element_id,
+        element_instance_key: process_instance.key,
+        flow_scope_key: :none,
+        state: :element_activating,
+        element_name: :undefined,
+        element_type: :process
+      },
+      %{
+        element_id: process_element_id,
+        element_instance_key: process_instance.key,
+        flow_scope_key: :none,
+        state: :element_activated,
+        element_name: :undefined,
+        element_type: :process
+      },
+      %{
+        element_id: Map.fetch!(start_event_definition, :id),
+        element_instance_key: :todo,
+        flow_scope_key: process_instance.key,
+        state: :element_activating,
+        element_name: Map.get(start_event_definition, :name, :undefined),
+        element_type: :start_event
       }
     ]
 
-    # find the node after the start event
-    next_node_id =
-      Enum.find(process_instance.definition.sequence_flows, &(&1.source_ref == start_event_definition.id)).target_ref
-
-    token = %{
-      node_id: next_node_id,
-      status: :active,
-      id: "token:1"
-    }
-
-    %{process_instance | uncommitted_events: uncommitted_events, tokens: [token]}
+    %{process_instance | uncommitted_events: uncommitted_events}
   end
 end
