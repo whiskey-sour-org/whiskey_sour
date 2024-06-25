@@ -50,10 +50,20 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     process_id = Keyword.fetch!(args, :process_id)
     element_id = Keyword.fetch!(args, :element_id)
     element_name = Keyword.get(args, :element_name, :undefined)
+    next_engine = update_activate_start_event_logs(next_engine, key, process_id, element_id, element_name)
 
+    do_run(next_engine, Free.return(key))
+  end
+
+  defp do_run(engine, %Free{functor: {:bind, free, f}}) do
+    {next_engine, next_free} = do_run(engine, free)
+    do_run(next_engine, f.(next_free))
+  end
+
+  defp update_activate_start_event_logs(engine, key, process_id, element_id, element_name) do
     next_reverse_audit_log =
       for state <- [:element_activating, :element_activated, :element_completing, :element_completed],
-          reduce: next_engine.reverse_audit_log do
+          reduce: engine.reverse_audit_log do
         reverse_audit_log ->
           [
             %{
@@ -68,14 +78,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
           ]
       end
 
-    next_engine = %{next_engine | reverse_audit_log: next_reverse_audit_log}
-
-    do_run(next_engine, Free.return(key))
-  end
-
-  defp do_run(engine, %Free{functor: {:bind, free, f}}) do
-    {next_engine, next_free} = do_run(engine, free)
-    do_run(next_engine, f.(next_free))
+    %{engine | reverse_audit_log: next_reverse_audit_log}
   end
 
   defp get_and_update_next_key!(engine) do
