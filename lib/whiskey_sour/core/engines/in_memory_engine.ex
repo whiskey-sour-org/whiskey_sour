@@ -51,19 +51,23 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     element_id = Keyword.fetch!(args, :element_id)
     element_name = Keyword.get(args, :element_name, :undefined)
 
-    reverse_start_events =
-      for state <- Enum.reverse([:activating, :activated, :completing, :completed]) do
-        %{
-          state: :"element_#{state}",
-          element_id: element_id,
-          element_instance_key: key,
-          flow_scope_key: process_id,
-          element_name: element_name,
-          element_type: :start_event
-        }
+    next_reverse_audit_log =
+      for state <- [:element_activating, :element_activated, :element_completing, :element_completed],
+          reduce: next_engine.reverse_audit_log do
+        reverse_audit_log ->
+          [
+            %{
+              state: state,
+              element_id: element_id,
+              element_instance_key: key,
+              flow_scope_key: process_id,
+              element_name: element_name,
+              element_type: :start_event
+            }
+            | reverse_audit_log
+          ]
       end
 
-    next_reverse_audit_log = reverse_start_events ++ next_engine.reverse_audit_log
     next_engine = %{next_engine | reverse_audit_log: next_reverse_audit_log}
 
     do_run(next_engine, Free.return(key))
