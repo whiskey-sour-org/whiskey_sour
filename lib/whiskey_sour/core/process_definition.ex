@@ -133,7 +133,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
 
   ## Example
       iex> process = ProcessDefinition.new(id: "order_process", name: "Order Processing")
-      iex> activity = %{id: "review_order", type: :user_task, name: "Review Order", assignee: "user1"}
+      iex> activity = [id: "review_order", type: :user_task, name: "Review Order", assignee: "user1"]
       iex> ProcessDefinition.add_activity(process, activity)
       %ProcessDefinition{
         id: "order_process",
@@ -144,7 +144,16 @@ defmodule WhiskeySour.Core.ProcessDefinition do
         sequence_flows: []
       }
   """
-  def add_activity(process, activity) do
+  def add_activity(process, activity_attrs) do
+    activity =
+      activity_attrs
+      |> Keyword.validate!([:id, :type, :name, :assignee])
+      |> Map.new()
+
+    unless activity.type in [:user_task, :service_task, :script_task] do
+      raise ArgumentError, "Invalid activity type: #{activity.type}"
+    end
+
     update_in(process, [Access.key!(:activities)], &[activity | &1])
   end
 
@@ -162,8 +171,8 @@ defmodule WhiskeySour.Core.ProcessDefinition do
 
   ## Example
       iex> process = ProcessDefinition.new(id: "order_process", name: "Order Processing")
-      iex> event = %{id: "start_event", type: :start_event, name: "Start Event"}
-      iex> ProcessDefinition.add_event(process, event)
+      iex> event_attrs = [id: "start_event", type: :start_event, name: "Start Event"]
+      iex> ProcessDefinition.add_event(process, event_attrs)
       %ProcessDefinition{
         id: "order_process",
         name: "Order Processing",
@@ -173,7 +182,12 @@ defmodule WhiskeySour.Core.ProcessDefinition do
         sequence_flows: []
       }
   """
-  def add_event(process, event) do
+  def add_event(process, event_attrs) do
+    event =
+      event_attrs
+      |> Keyword.validate!([:id, :type, name: :undefined])
+      |> Map.new()
+
     update_in(process, [Access.key!(:events)], &[event | &1])
   end
 
@@ -183,7 +197,7 @@ defmodule WhiskeySour.Core.ProcessDefinition do
   ## Parameters
 
   - `process`: The process definition.
-  - `gateway`: The gateway to add.
+  - `gateway_attrs`: The gateway attributes to add.
 
   ## Returns
 
@@ -192,8 +206,8 @@ defmodule WhiskeySour.Core.ProcessDefinition do
   ## Example
 
       iex> process = ProcessDefinition.new(id: "order_process", name: "Order Processing")
-      iex> gateway = %{id: "decision_gateway", type: :exclusive, name: "Decision Gateway"}
-      iex> ProcessDefinition.add_gateway(process, gateway)
+      iex> gateway_attrs = [id: "decision_gateway", type: :exclusive, name: "Decision Gateway"]
+      iex> ProcessDefinition.add_gateway(process, gateway_attrs)
       %ProcessDefinition{
         id: "order_process",
         name: "Order Processing",
@@ -203,7 +217,16 @@ defmodule WhiskeySour.Core.ProcessDefinition do
         sequence_flows: []
       }
   """
-  def add_gateway(process, gateway) do
+  def add_gateway(process, gateway_attrs) do
+    gateway =
+      gateway_attrs
+      |> Keyword.validate!([:id, :type, name: :undefined])
+      |> Map.new()
+
+    unless gateway.type in [:exclusive, :parallel, :inclusive] do
+      raise ArgumentError, "Invalid gateway type: #{gateway.type}"
+    end
+
     update_in(process, [Access.key!(:gateways)], &[gateway | &1])
   end
 
@@ -221,8 +244,8 @@ defmodule WhiskeySour.Core.ProcessDefinition do
 
   ## Example
       iex> process = ProcessDefinition.new(id: "order_process", name: "Order Processing")
-      iex> |> ProcessDefinition.add_event(%{id: "start_event", type: :start_event, name: "Start Event"})
-      iex> sequence_flow = %{id: "flow1", source_ref: "start_event", target_ref: "review_order"}
+      iex> |> ProcessDefinition.add_event(id: "start_event", type: :start_event, name: "Start Event")
+      iex> sequence_flow = [id: "flow1", source_ref: "start_event", target_ref: "review_order"]
       iex> ProcessDefinition.add_sequence_flow(process, sequence_flow)
       %ProcessDefinition{
         id: "order_process",
@@ -233,7 +256,19 @@ defmodule WhiskeySour.Core.ProcessDefinition do
         sequence_flows: [%{id: "flow1", source_ref: "start_event", target_ref: "review_order"}]
       }
   """
-  def add_sequence_flow(process, sequence_flow) do
+  def add_sequence_flow(process, sequence_flow_attrs) do
+    sequence_flow =
+      sequence_flow_attrs
+      |> Keyword.validate!([:id, :source_ref, :target_ref])
+      |> Map.new()
+
     update_in(process, [Access.key!(:sequence_flows)], &[sequence_flow | &1])
+  end
+
+  def fetch_start_event(%__MODULE__{events: events}) do
+    case Enum.find(events, &(&1.type == :start_event)) do
+      nil -> {:error, :start_event_not_found}
+      start_event -> {:ok, start_event}
+    end
   end
 end

@@ -28,7 +28,14 @@ defmodule WhiskeySour.Core.ProcessDefinitionTest do
       activity = [id: "review_order", type: :user_task, name: "Review Order", assignee: "user1"]
       updated_process = ProcessDefinition.add_activity(process, activity)
 
-      assert updated_process.activities == [activity]
+      assert updated_process.activities == [
+               %{
+                 id: "review_order",
+                 type: :user_task,
+                 name: "Review Order",
+                 assignee: "user1"
+               }
+             ]
     end
   end
 
@@ -38,7 +45,13 @@ defmodule WhiskeySour.Core.ProcessDefinitionTest do
       event = [id: "start_event", type: :start_event, name: "Start Event"]
       updated_process = ProcessDefinition.add_event(process, event)
 
-      assert updated_process.events == [event]
+      assert updated_process.events == [
+               %{
+                 id: "start_event",
+                 type: :start_event,
+                 name: "Start Event"
+               }
+             ]
     end
   end
 
@@ -48,7 +61,13 @@ defmodule WhiskeySour.Core.ProcessDefinitionTest do
       gateway = [id: "decision_gateway", type: :exclusive, name: "Decision Gateway"]
       updated_process = ProcessDefinition.add_gateway(process, gateway)
 
-      assert updated_process.gateways == [gateway]
+      assert updated_process.gateways == [
+               %{
+                 id: "decision_gateway",
+                 type: :exclusive,
+                 name: "Decision Gateway"
+               }
+             ]
     end
   end
 
@@ -58,7 +77,13 @@ defmodule WhiskeySour.Core.ProcessDefinitionTest do
       sequence_flow = [id: "flow1", source_ref: "start_event", target_ref: "review_order"]
       updated_process = ProcessDefinition.add_sequence_flow(process, sequence_flow)
 
-      assert updated_process.sequence_flows == [sequence_flow]
+      assert updated_process.sequence_flows == [
+               %{
+                 id: "flow1",
+                 source_ref: "start_event",
+                 target_ref: "review_order"
+               }
+             ]
     end
   end
 end

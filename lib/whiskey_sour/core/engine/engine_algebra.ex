@@ -3,24 +3,24 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
   alias WhiskeySour.Core.Engine.EngineFunctor
   alias WhiskeySour.Core.Free
 
-  def create_instance(opts) do
-    definition = Keyword.fetch!(opts, :definition)
+  def create_instance(opts) when is_list(opts) do
+    bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
 
-    Free.bind(activate_process(definition.id), fn process_id ->
-      start_event = Enum.find(definition.events, &(&1.type == :start_event))
-      start_event_id = start_event.id
-      start_event_name = Map.get(start_event, :name, :undefined)
+    Free.bind(fetch_process_definition_key(bpmn_process_id: bpmn_process_id), fn
+      {:ok, %{bpmn_process_key: bpmn_process_key}} ->
+        Free.bind(activate_process(bpmn_process_id: bpmn_process_id, bpmn_process_key: bpmn_process_key), fn
+          {:ok, process_instance} ->
+            Free.bind(
+              activate_start_event(process_instance: process_instance),
+              fn
+                {:ok, process_instance} -> Free.return({:ok, process_instance})
+                {:error, :process_definition_not_found} -> Free.return({:error, :process_definition_not_found})
+              end
+            )
+        end)
 
-      Free.bind(
-        activate_start_event(
-          process_id: process_id,
-          element_id: start_event_id,
-          element_name: start_event_name
-        ),
-        fn _event_id ->
-          Free.return(:ok)
-        end
-      )
+      {:error, :process_definition_not_found} ->
+        Free.return({:error, :process_definition_not_found})
     end)
   end
 
@@ -29,9 +29,35 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
     Free.lift(EngineFunctor.new(:deploy_definition, %{definition: definition}))
   end
 
-  def activate_process(name), do: Free.lift(EngineFunctor.new(:activate_process, [name]))
+  def fetch_process_definition_key(opts) do
+    bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
 
-  def activate_start_event(args), do: Free.lift(EngineFunctor.new(:activate_start_event, args))
+    Free.lift(EngineFunctor.new(:fetch_process_definition_key, %{bpmn_process_id: bpmn_process_id}))
+  end
+
+  def activate_process(opts) do
+    required_attrs = [:bpmn_process_id, :bpmn_process_key]
+
+    args =
+      opts
+      |> Keyword.validate!(required_attrs)
+      |> Keyword.take(required_attrs)
+      |> Map.new()
+
+    Free.lift(EngineFunctor.new(:activate_process, args))
+  end
+
+  def activate_start_event(args) do
+    required_attrs = [:process_instance]
+
+    args =
+      args
+      |> Keyword.validate!(required_attrs)
+      |> Keyword.take(required_attrs)
+      |> Map.new()
+
+    Free.lift(EngineFunctor.new(:activate_start_event, args))
+  end
 
   def subscribe(opts) do
     event_names =
