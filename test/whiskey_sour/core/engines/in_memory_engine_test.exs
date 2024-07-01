@@ -21,7 +21,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
       %{definition: definition}
     end
 
-    test "should return deployed workflow info", %{definition: definition} do
+    test "should publish `process_deployed` event", %{definition: definition} do
       InMemoryEngine.new()
       |> InMemoryEngine.run(
         EngineAlgebra.subscribe(
