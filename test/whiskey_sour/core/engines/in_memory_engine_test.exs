@@ -41,7 +41,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
             %{
               bpmn_process_id: "order_process",
               version: 1,
-              workflow_key: _workflow_key
+              process_key: _process_key
             }
           ]
         }

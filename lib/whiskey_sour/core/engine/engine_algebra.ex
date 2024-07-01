@@ -7,8 +7,8 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
     bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
 
     Free.bind(fetch_process_definition_key(bpmn_process_id: bpmn_process_id), fn
-      {:ok, %{workflow_key: workflow_key}} ->
-        Free.bind(activate_process(bpmn_process_id: bpmn_process_id, workflow_key: workflow_key), fn
+      {:ok, %{process_key: process_key}} ->
+        Free.bind(activate_process(bpmn_process_id: bpmn_process_id, process_key: process_key), fn
           {:ok, process_instance} ->
             Free.bind(
               activate_start_event(process_instance: process_instance),
@@ -36,7 +36,7 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
   end
 
   def activate_process(opts) do
-    required_attrs = [:bpmn_process_id, :workflow_key]
+    required_attrs = [:bpmn_process_id, :process_key]
 
     args =
       opts

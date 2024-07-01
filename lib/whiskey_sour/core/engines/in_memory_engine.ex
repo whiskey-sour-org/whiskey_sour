@@ -26,7 +26,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   defp do_run(engine, %Free{functor: nil, value: value}), do: {engine, value}
 
   defp do_run(engine, %Free{functor: %EngineFunctor{operation: :activate_process, args: args}}) do
-    %{bpmn_process_id: bpmn_process_id, workflow_key: workflow_key} = args
+    %{bpmn_process_id: bpmn_process_id, process_key: process_key} = args
     {key, next_engine} = get_and_update_next_key!(engine)
 
     activating_event = %{
@@ -53,7 +53,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     process_instance =
       ProcessInstance.new(
         key: key,
-        workflow_key: workflow_key,
+        process_key: process_key,
         bpmn_process_id: bpmn_process_id,
         state: :active
       )
@@ -67,7 +67,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
     with {:ok, %{definition: process_definition}} <-
            fetch_process_definition_assigns_by_key(engine,
-             workflow_key: process_instance.workflow_key,
+             process_key: process_instance.process_key,
              bpmn_process_id: process_instance.bpmn_process_id
            ),
          {:ok, start_event_def} <- ProcessDefinition.fetch_start_event(process_definition) do
@@ -120,7 +120,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
       event_name: :process_deployed,
       event_payload: %{
         key: 1,
-        workflows: [%{bpmn_process_id: process_definition_id, version: 1, workflow_key: 2}]
+        workflows: [%{bpmn_process_id: process_definition_id, version: 1, process_key: 2}]
       }
     })
 
@@ -132,8 +132,8 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
        }) do
     case fetch_lastest_process_assigns(engine, bpmn_process_id: bpmn_process_id) do
       {:ok, assigns} ->
-        %{key: workflow_key} = assigns
-        do_run(engine, Free.return({:ok, %{workflow_key: workflow_key}}))
+        %{key: process_key} = assigns
+        do_run(engine, Free.return({:ok, %{process_key: process_key}}))
 
       {:error, :process_definition_not_found} = error ->
         do_run(engine, Free.return(error))
@@ -181,14 +181,14 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
   def fetch_process_definition_assigns_by_key(engine, opts) do
     bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
-    workflow_key = Keyword.fetch!(opts, :workflow_key)
+    process_key = Keyword.fetch!(opts, :process_key)
 
     case Map.get(engine.workflow_definitions, bpmn_process_id) do
       nil ->
         {:error, :process_definition_not_found}
 
       workflow_definitions ->
-        case Enum.find(workflow_definitions, &(&1.key == workflow_key)) do
+        case Enum.find(workflow_definitions, &(&1.key == process_key)) do
           nil ->
             {:error, :process_definition_not_found}
 
