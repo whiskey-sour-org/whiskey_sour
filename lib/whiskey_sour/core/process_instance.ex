@@ -1,12 +1,3 @@
-defmodule WhiskeySour.Core.ProcessInstance.ProcessFunctor do
-  @moduledoc """
-  The `WhiskeySour.Core.ProcessInstance.ProcessFunctor` module represents the functor for process operations.
-  """
-  defstruct [:operation, :args]
-
-  def new(operation, args \\ []), do: %__MODULE__{operation: operation, args: args}
-end
-
 defmodule WhiskeySour.Core.ProcessInstance do
   @moduledoc """
   The `WhiskeySour.Core.ProcessInstance` module represents an instance of a BPMN workflow process.
@@ -18,21 +9,6 @@ defmodule WhiskeySour.Core.ProcessInstance do
   - `tokens`: A list of tokens that represent the current state and progress of the process instance.
   - `definition`: The workflow definition that this process instance is executing.
   """
-
-  alias WhiskeySour.Core.ProcessInstance.ProcessFunctor
-
-  defmodule Free do
-    @moduledoc false
-    defstruct [:functor, :value]
-
-    def return(value), do: %Free{functor: nil, value: value}
-
-    def lift(fa), do: %Free{functor: fa, value: nil}
-
-    def bind(free, f) do
-      %Free{functor: {:bind, free, f}, value: nil}
-    end
-  end
 
   # Lifting process operations into the free monad
   def activate_process(name), do: Free.lift(ProcessFunctor.new(:activate_process, [name]))
