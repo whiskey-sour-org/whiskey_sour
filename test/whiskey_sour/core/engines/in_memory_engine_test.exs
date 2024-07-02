@@ -119,6 +119,22 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  state: :element_activated,
                  element_name: "Start Event",
                  element_type: :start_event
+               },
+               %{
+                 element_id: "start_event_1",
+                 element_instance_key: start_event_1_element_instance_key,
+                 flow_scope_key: flow_scope_key,
+                 state: :element_completing,
+                 element_name: "Start Event",
+                 element_type: :start_event
+               },
+               %{
+                 element_id: "start_event_1",
+                 element_instance_key: start_event_1_element_instance_key,
+                 flow_scope_key: flow_scope_key,
+                 state: :element_completed,
+                 element_name: "Start Event",
+                 element_type: :start_event
                }
                | _audit_log_tail
              ] = audit_log
