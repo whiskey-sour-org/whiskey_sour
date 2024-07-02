@@ -8,12 +8,12 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   alias WhiskeySour.Core.ProcessDefinition
   alias WhiskeySour.Core.ProcessInstance
 
-  defstruct ~w(reverse_audit_log unique_key_generator_fun event_subscriptions workflow_definitions)a
+  defstruct ~w(reverse_audit_log unique_key_generator_fun event_subscriptions process_definition_deployments)a
 
   def new,
     do: %__MODULE__{
       event_subscriptions: [],
-      workflow_definitions: %{},
+      process_definition_deployments: %{},
       reverse_audit_log: [],
       unique_key_generator_fun: fn -> 1 end
     }
@@ -94,9 +94,9 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     process_definition_id = definition.id
     {key, next_engine} = get_and_update_next_key!(engine)
 
-    next_workflow_definitions =
+    next_process_definition_deployments =
       Map.update(
-        engine.workflow_definitions,
+        engine.process_definition_deployments,
         process_definition_id,
         [
           %{
@@ -106,15 +106,15 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
           }
         ],
         fn
-          current_workflow_definitions_for_id ->
-            last_deployed_process_definition = Enum.max_by(current_workflow_definitions_for_id, & &1.version)
+          current_process_definition_deployments_for_id ->
+            last_deployed_process_definition = Enum.max_by(current_process_definition_deployments_for_id, & &1.version)
             next_version_id = last_deployed_process_definition.version + 1
             next_deployed_process_definition = %{version: next_version_id, definition: definition, key: key}
-            [next_deployed_process_definition | current_workflow_definitions_for_id]
+            [next_deployed_process_definition | current_process_definition_deployments_for_id]
         end
       )
 
-    next_engine = %{next_engine | workflow_definitions: next_workflow_definitions}
+    next_engine = %{next_engine | process_definition_deployments: next_process_definition_deployments}
 
     publish_event(next_engine, %{
       event_name: :process_deployed,
@@ -183,12 +183,12 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
     process_key = Keyword.fetch!(opts, :process_key)
 
-    case Map.get(engine.workflow_definitions, bpmn_process_id) do
+    case Map.get(engine.process_definition_deployments, bpmn_process_id) do
       nil ->
         {:error, :process_definition_not_found}
 
-      workflow_definitions ->
-        case Enum.find(workflow_definitions, &(&1.key == process_key)) do
+      process_definition_deployments ->
+        case Enum.find(process_definition_deployments, &(&1.key == process_key)) do
           nil ->
             {:error, :process_definition_not_found}
 
@@ -201,14 +201,27 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   def fetch_lastest_process_assigns(engine, opts) do
     bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
 
-    case Map.get(engine.workflow_definitions, bpmn_process_id) do
+    case Map.get(engine.process_definition_deployments, bpmn_process_id) do
       nil ->
         {:error, :process_definition_not_found}
 
-      workflow_definitions ->
-        {:ok, Enum.max_by(workflow_definitions, & &1.version)}
+      process_definition_deployments ->
+        {:ok, Enum.max_by(process_definition_deployments, & &1.version)}
     end
   end
 
   def audit_log(engine), do: Enum.reverse(engine.reverse_audit_log)
+
+  def process_definitions_stream(engine) do
+    Stream.flat_map(engine.process_definition_deployments, fn {_, process_definition_deployments} ->
+      for %{version: version, definition: definition, key: process_key} <- process_definition_deployments do
+        %{
+          bpmn_process_id: definition.id,
+          name: definition.name,
+          process_key: process_key,
+          version: version
+        }
+      end
+    end)
+  end
 end

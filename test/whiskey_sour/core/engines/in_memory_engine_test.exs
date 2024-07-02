@@ -47,6 +47,23 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
         }
       }
     end
+
+    test "should update `process_definitions_stream`", %{definition: definition} do
+      process_definitions =
+        InMemoryEngine.new()
+        |> InMemoryEngine.run(EngineAlgebra.deploy_definition(definition: definition))
+        |> InMemoryEngine.process_definitions_stream()
+        |> Enum.to_list()
+
+      assert [
+               %{
+                 process_key: _process_key,
+                 name: "Order Processing",
+                 version: 1,
+                 bpmn_process_id: "order_process"
+               }
+             ] = process_definitions
+    end
   end
 
   describe "start w/ order_process" do
