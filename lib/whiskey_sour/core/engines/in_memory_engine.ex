@@ -27,12 +27,12 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
   defp do_run(engine, %Free{functor: %EngineFunctor{operation: :activate_process, args: args}}) do
     %{bpmn_process_id: bpmn_process_id, process_key: process_key} = args
-    {key, next_engine} = get_and_update_next_key!(engine)
+    {element_instance_key, next_engine} = get_and_update_next_key!(engine)
 
     activating_event = %{
       state: :element_activating,
       element_id: bpmn_process_id,
-      element_instance_key: key,
+      element_instance_key: element_instance_key,
       flow_scope_key: :none,
       element_name: :undefined,
       element_type: :process
@@ -41,7 +41,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     activated_event = %{
       state: :element_activated,
       element_id: bpmn_process_id,
-      element_instance_key: key,
+      element_instance_key: element_instance_key,
       flow_scope_key: :none,
       element_name: :undefined,
       element_type: :process
@@ -52,7 +52,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
     process_instance =
       ProcessInstance.new(
-        key: key,
+        key: element_instance_key,
         process_key: process_key,
         bpmn_process_id: bpmn_process_id,
         state: :active
@@ -72,10 +72,53 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
            ),
          {:ok, start_event_def} <- ProcessDefinition.fetch_start_event(process_definition) do
       next_engine = update_activate_start_event_logs(next_engine, key, process_instance.key, start_event_def)
-      do_run(next_engine, Free.return({:ok, process_instance}))
+
+      next_functor =
+        EngineFunctor.new(:take_next_flow, %{
+          process_instance: process_instance,
+          definition: process_definition,
+          current_element_id: start_event_def.id
+        })
+
+      do_run(next_engine, Free.lift(next_functor))
     else
       {:error, error} ->
         do_run(next_engine, Free.return({:error, error}))
+    end
+  end
+
+  defp do_run(engine, %Free{functor: %EngineFunctor{operation: :take_next_flow, args: args}}) do
+    %{process_instance: process_instance, definition: process_definition, current_element_id: current_element_id} = args
+    {key, next_engine} = get_and_update_next_key!(engine)
+
+    with {:ok, sequence_flow_def} <-
+           ProcessDefinition.fetch_sequence_flow_by_source_ref(process_definition, current_element_id),
+         {:ok, target_element_def} <-
+           ProcessDefinition.fetch_element_by_id(process_definition, sequence_flow_def.target_ref) do
+      next_engine = update_sequence_flow_logs(next_engine, key, process_instance.key, sequence_flow_def)
+
+      next_functor =
+        EngineFunctor.new(:activate_element, %{
+          process_instance: process_instance,
+          element_def: target_element_def
+        })
+
+      do_run(next_engine, Free.lift(next_functor))
+    else
+      {:error, error} ->
+        do_run(next_engine, Free.return({:error, error}))
+    end
+  end
+
+  defp do_run(engine, %Free{functor: %EngineFunctor{operation: :activate_element, args: args}}) do
+    %{process_instance: process_instance, element_def: element_def} = args
+    {key, next_engine} = get_and_update_next_key!(engine)
+
+    case element_def.type do
+      :user_task ->
+        next_engine = activate_user_task(next_engine, key, process_instance.key, element_def)
+
+        do_run(next_engine, Free.return({:ok, process_instance}))
     end
   end
 
@@ -151,7 +194,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     |> Enum.each(fn subscription -> subscription.event_handler.(event) end)
   end
 
-  defp update_activate_start_event_logs(engine, key, process_id, start_event_def) do
+  defp update_activate_start_event_logs(engine, element_instance_key, flow_scope_key, start_event_def) do
     %{id: element_id, name: element_name} = start_event_def
 
     next_reverse_audit_log =
@@ -162,10 +205,51 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
             %{
               state: state,
               element_id: element_id,
-              element_instance_key: key,
-              flow_scope_key: process_id,
+              element_instance_key: element_instance_key,
+              flow_scope_key: flow_scope_key,
               element_name: element_name,
               element_type: :start_event
+            }
+            | reverse_audit_log
+          ]
+      end
+
+    %{engine | reverse_audit_log: next_reverse_audit_log}
+  end
+
+  defp update_sequence_flow_logs(engine, element_instance_key, flow_scope_key, sequence_flow_def) do
+    %{id: element_id} = sequence_flow_def
+
+    next_reverse_audit_log = [
+      %{
+        state: :element_taken,
+        element_id: element_id,
+        element_instance_key: element_instance_key,
+        flow_scope_key: flow_scope_key,
+        element_name: :undefined,
+        element_type: :sequence_flow
+      }
+      | engine.reverse_audit_log
+    ]
+
+    %{engine | reverse_audit_log: next_reverse_audit_log}
+  end
+
+  def activate_user_task(engine, element_instance_key, flow_scope_key, element_def) do
+    %{id: element_id, name: element_name} = element_def
+
+    next_reverse_audit_log =
+      for state <- [:element_activating, :element_activated],
+          reduce: engine.reverse_audit_log do
+        reverse_audit_log ->
+          [
+            %{
+              state: state,
+              element_id: element_id,
+              element_instance_key: element_instance_key,
+              flow_scope_key: flow_scope_key,
+              element_name: element_name,
+              element_type: :user_task
             }
             | reverse_audit_log
           ]

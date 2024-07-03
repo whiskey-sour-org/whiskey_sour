@@ -271,4 +271,23 @@ defmodule WhiskeySour.Core.ProcessDefinition do
       start_event -> {:ok, start_event}
     end
   end
+
+  def fetch_sequence_flow_by_source_ref(%__MODULE__{sequence_flows: sequence_flows}, source_ref) do
+    sequence_flows
+    |> Enum.find(&(&1.source_ref == source_ref))
+    |> case do
+      nil -> {:error, :sequence_flow_not_found}
+      sequence_flow -> {:ok, sequence_flow}
+    end
+  end
+
+  def fetch_element_by_id(%__MODULE__{activities: activities, events: events, gateways: gateways}, id) do
+    [activities, events, gateways]
+    |> Enum.flat_map(& &1)
+    |> Enum.find(&(&1.id == id))
+    |> case do
+      nil -> {:error, :element_not_found}
+      element -> {:ok, element}
+    end
+  end
 end

@@ -13,8 +13,11 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
             Free.bind(
               activate_start_event(process_instance: process_instance),
               fn
-                {:ok, process_instance} -> Free.return({:ok, process_instance})
-                {:error, :process_definition_not_found} -> Free.return({:error, :process_definition_not_found})
+                {:ok, process_instance} ->
+                  Free.return({:ok, process_instance})
+
+                {:error, :process_definition_not_found} ->
+                  Free.return({:error, :process_definition_not_found})
               end
             )
         end)

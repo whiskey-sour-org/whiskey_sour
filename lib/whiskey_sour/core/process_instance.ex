@@ -3,10 +3,11 @@ defmodule WhiskeySour.Core.ProcessInstance do
   defstruct ~w(key bpmn_process_id process_key state)a
 
   def new(opts) do
-    key = Keyword.fetch!(opts, :key)
-    process_key = Keyword.fetch!(opts, :process_key)
-    bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
-    state = Keyword.fetch!(opts, :state)
+    valid_opts = Keyword.validate!(opts, [:key, :process_key, :process_key, :bpmn_process_id, :state])
+    key = Keyword.fetch!(valid_opts, :key)
+    process_key = Keyword.fetch!(valid_opts, :process_key)
+    bpmn_process_id = Keyword.fetch!(valid_opts, :bpmn_process_id)
+    state = Keyword.fetch!(valid_opts, :state)
 
     %__MODULE__{
       key: key,

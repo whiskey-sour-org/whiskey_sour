@@ -135,8 +135,30 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  state: :element_completed,
                  element_name: "Start Event",
                  element_type: :start_event
+               },
+               %{
+                 element_id: "flow1",
+                 element_instance_key: _flow1_element_instance_key,
+                 flow_scope_key: flow_scope_key,
+                 state: :element_taken,
+                 element_type: :sequence_flow
+               },
+               %{
+                 element_id: "review_order",
+                 element_instance_key: review_order_element_instance_key,
+                 flow_scope_key: flow_scope_key,
+                 state: :element_activating,
+                 element_name: "Review Order",
+                 element_type: :user_task
+               },
+               %{
+                 element_id: "review_order",
+                 element_instance_key: review_order_element_instance_key,
+                 flow_scope_key: flow_scope_key,
+                 state: :element_activated,
+                 element_name: "Review Order",
+                 element_type: :user_task
                }
-               | _audit_log_tail
              ] = audit_log
     end
   end
@@ -212,8 +234,30 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  state: :element_completed,
                  element_name: :undefined,
                  element_type: :start_event
+               },
+               %{
+                 element_id: "flow_1",
+                 element_instance_key: _key_3,
+                 flow_scope_key: flow_scope_key_1,
+                 state: :element_taken,
+                 element_type: :sequence_flow
+               },
+               %{
+                 element_id: "activity_1",
+                 element_instance_key: key_4,
+                 flow_scope_key: flow_scope_key_1,
+                 state: :element_activating,
+                 element_name: "Book flight",
+                 element_type: :user_task
+               },
+               %{
+                 element_id: "activity_1",
+                 element_instance_key: key_4,
+                 flow_scope_key: flow_scope_key_1,
+                 state: :element_activated,
+                 element_name: "Book flight",
+                 element_type: :user_task
                }
-               | _audit_log_tail
              ] = audit_log
     end
   end
