@@ -16,14 +16,14 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
                 {:ok, process_instance} ->
                   Free.return({:ok, process_instance})
 
-                {:error, :process_definition_not_found} ->
-                  Free.return({:error, :process_definition_not_found})
+                {:error, _reason} = error ->
+                  Free.return(error)
               end
             )
         end)
 
-      {:error, :process_definition_not_found} ->
-        Free.return({:error, :process_definition_not_found})
+      {:error, _reason} = error ->
+        Free.return(error)
     end)
   end
 
