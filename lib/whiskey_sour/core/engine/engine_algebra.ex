@@ -4,12 +4,18 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
   alias WhiskeySour.Core.Free
 
   def create_instance(opts) when is_list(opts) do
-    bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
+    %{
+      bpmn_process_id: bpmn_process_id,
+      correlation_ref: correlation_ref
+    } =
+      opts
+      |> Keyword.validate!([:bpmn_process_id, correlation_ref: nil])
+      |> Map.new()
 
-    Free.bind(fetch_process_definition_key(bpmn_process_id: bpmn_process_id), fn
+    Free.bind(fetch_process_definition_key(bpmn_process_id: bpmn_process_id, correlation_ref: correlation_ref), fn
       {:ok, %{process_key: process_key}} ->
         Free.bind(
-          activate_process(bpmn_process_id: bpmn_process_id, process_key: process_key),
+          activate_process(bpmn_process_id: bpmn_process_id, process_key: process_key, correlation_ref: correlation_ref),
           &Free.return/1
         )
 
@@ -34,15 +40,12 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
   end
 
   def activate_process(opts) do
-    required_attrs = [:bpmn_process_id, :process_key]
-
-    args =
+    valid_args =
       opts
-      |> Keyword.validate!(required_attrs)
-      |> Keyword.take(required_attrs)
+      |> Keyword.validate!([:bpmn_process_id, :process_key, correlation_ref: nil])
       |> Map.new()
 
-    Free.lift(EngineFunctor.new(:activate_process, args))
+    Free.lift(EngineFunctor.new(:activate_process, valid_args))
   end
 
   def activate_start_event(opts) do

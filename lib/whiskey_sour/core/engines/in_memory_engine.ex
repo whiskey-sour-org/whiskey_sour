@@ -27,13 +27,13 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   defp do_run(engine, %Free{functor: nil, value: value}), do: {engine, value}
 
   defp do_run(engine, %Free{functor: %EngineFunctor{operation: :activate_process, args: args}}) do
-    %{bpmn_process_id: bpmn_process_id, process_key: process_key} = args
-    {element_instance_key, next_engine} = get_and_update_next_key!(engine)
+    %{bpmn_process_id: bpmn_process_id, process_key: process_key, correlation_ref: correlation_ref} = args
+    {process_instance_key, next_engine} = get_and_update_next_key!(engine)
 
     activating_event = %{
       state: :element_activating,
       element_id: bpmn_process_id,
-      element_instance_key: element_instance_key,
+      element_instance_key: process_instance_key,
       flow_scope_key: :none,
       element_name: :undefined,
       element_type: :process
@@ -42,7 +42,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     activated_event = %{
       state: :element_activated,
       element_id: bpmn_process_id,
-      element_instance_key: element_instance_key,
+      element_instance_key: process_instance_key,
       flow_scope_key: :none,
       element_name: :undefined,
       element_type: :process
@@ -53,11 +53,20 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
     process_instance =
       ProcessInstance.new(
-        key: element_instance_key,
+        key: process_instance_key,
         process_key: process_key,
         bpmn_process_id: bpmn_process_id,
         state: :active
       )
+
+    publish_event(next_engine, %{
+      event_name: :process_activated,
+      event_payload: %{
+        key: process_instance_key,
+        process_instance_key: process_instance_key
+      },
+      correlation_ref: correlation_ref
+    })
 
     next_functor =
       EngineFunctor.new(:activate_start_event, %{process_instance: process_instance})
@@ -244,18 +253,19 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     %{id: element_id, name: element_name} = element_def
 
     engine
-    |> then(fn engine ->
+    |> get_and_update_next_key!()
+    |> then(fn {user_task_key, engine} ->
       current_user_tasks = engine.user_tasks
 
       next_user_tasks = [
         %{
-          key: element_instance_key,
+          key: user_task_key,
           element_id: element_id,
-          flow_scope_key: flow_scope_key,
           element_name: element_name,
           assignee: Map.get(element_def, :assignee, :unassigned),
           state: :active,
-          candidate_groups: Map.get(element_def, :candidate_groups, [])
+          candidate_groups: Map.get(element_def, :candidate_groups, []),
+          process_instance_key: flow_scope_key
         }
         | current_user_tasks
       ]
@@ -326,11 +336,12 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     Stream.map(engine.user_tasks, fn user_task ->
       %{
         assignee: Map.fetch!(user_task, :assignee),
+        candidate_groups: Map.fetch!(user_task, :candidate_groups),
         element_id: Map.fetch!(user_task, :element_id),
         element_instance_key: Map.fetch!(user_task, :key),
         name: Map.fetch!(user_task, :element_name),
-        state: Map.fetch!(user_task, :state),
-        candidate_groups: Map.fetch!(user_task, :candidate_groups)
+        process_instance_key: Map.fetch!(user_task, :process_instance_key),
+        state: Map.fetch!(user_task, :state)
       }
     end)
   end
