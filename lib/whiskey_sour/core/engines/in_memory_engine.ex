@@ -166,8 +166,8 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     publish_event(next_engine, %{
       event_name: :process_deployed,
       event_payload: %{
-        key: 1,
-        workflows: [%{bpmn_process_id: process_definition_id, version: 1, process_key: 2}]
+        key: key,
+        workflows: [%{bpmn_process_id: process_definition_id, version: 1, process_key: key}]
       }
     })
 
