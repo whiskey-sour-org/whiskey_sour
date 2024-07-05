@@ -137,7 +137,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   end
 
   defp do_run(engine, %Free{functor: %EngineFunctor{operation: :deploy_definition, args: args}}) do
-    %{definition: definition} = args
+    %{definition: definition, correlation_ref: correlation_ref} = args
     process_definition_id = definition.id
     {key, next_engine} = get_and_update_next_key!(engine)
 
@@ -168,7 +168,8 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
       event_payload: %{
         key: key,
         workflows: [%{bpmn_process_id: process_definition_id, version: 1, process_key: key}]
-      }
+      },
+      correlation_ref: correlation_ref
     })
 
     do_run(next_engine, Free.return({:ok, next_engine}))

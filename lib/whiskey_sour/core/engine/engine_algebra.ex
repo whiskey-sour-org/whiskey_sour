@@ -19,8 +19,12 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
   end
 
   def deploy_definition(opts) do
-    definition = Keyword.fetch!(opts, :definition)
-    Free.lift(EngineFunctor.new(:deploy_definition, %{definition: definition}))
+    valid_args =
+      opts
+      |> Keyword.validate!([:definition, correlation_ref: nil])
+      |> Map.new()
+
+    Free.lift(EngineFunctor.new(:deploy_definition, valid_args))
   end
 
   def fetch_process_definition_key(opts) do
@@ -41,16 +45,13 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
     Free.lift(EngineFunctor.new(:activate_process, args))
   end
 
-  def activate_start_event(args) do
-    required_attrs = [:process_instance]
-
-    args =
-      args
-      |> Keyword.validate!(required_attrs)
-      |> Keyword.take(required_attrs)
+  def activate_start_event(opts) do
+    valid_args =
+      opts
+      |> Keyword.validate!([:process_instance, correlation_ref: nil])
       |> Map.new()
 
-    Free.lift(EngineFunctor.new(:activate_start_event, args))
+    Free.lift(EngineFunctor.new(:activate_start_event, valid_args))
   end
 
   def subscribe(opts) do

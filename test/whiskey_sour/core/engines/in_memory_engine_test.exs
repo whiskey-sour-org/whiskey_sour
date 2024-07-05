@@ -22,6 +22,8 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
     end
 
     test "should publish `process_deployed` event", %{definition: definition} do
+      correlation_ref = make_ref()
+
       InMemoryEngine.new()
       |> InMemoryEngine.run(
         EngineAlgebra.subscribe(
@@ -31,7 +33,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
           end
         )
       )
-      |> InMemoryEngine.run(EngineAlgebra.deploy_definition(definition: definition))
+      |> InMemoryEngine.run(EngineAlgebra.deploy_definition(definition: definition, correlation_ref: correlation_ref))
 
       assert_received %{
         event_name: :process_deployed,
@@ -44,7 +46,8 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
               process_key: _process_key
             }
           ]
-        }
+        },
+        correlation_ref: ^correlation_ref
       }
     end
 
