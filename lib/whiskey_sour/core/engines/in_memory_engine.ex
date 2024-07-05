@@ -8,14 +8,15 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   alias WhiskeySour.Core.ProcessDefinition
   alias WhiskeySour.Core.ProcessInstance
 
-  defstruct ~w(reverse_audit_log unique_key_generator_fun event_subscriptions process_definition_deployments)a
+  defstruct ~w(reverse_audit_log unique_key_generator_fun event_subscriptions process_definition_deployments user_tasks)a
 
   def new,
     do: %__MODULE__{
       event_subscriptions: [],
       process_definition_deployments: %{},
       reverse_audit_log: [],
-      unique_key_generator_fun: fn -> 1 end
+      unique_key_generator_fun: fn -> 1 end,
+      user_tasks: []
     }
 
   def run(engine, free) do
@@ -241,24 +242,45 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   def activate_user_task(engine, element_instance_key, flow_scope_key, element_def) do
     %{id: element_id, name: element_name} = element_def
 
-    next_reverse_audit_log =
-      for state <- [:element_activating, :element_activated],
-          reduce: engine.reverse_audit_log do
-        reverse_audit_log ->
-          [
-            %{
-              state: state,
-              element_id: element_id,
-              element_instance_key: element_instance_key,
-              flow_scope_key: flow_scope_key,
-              element_name: element_name,
-              element_type: :user_task
-            }
-            | reverse_audit_log
-          ]
-      end
+    engine
+    |> then(fn engine ->
+      current_user_tasks = engine.user_tasks
 
-    %{engine | reverse_audit_log: next_reverse_audit_log}
+      next_user_tasks = [
+        %{
+          key: element_instance_key,
+          element_id: element_id,
+          flow_scope_key: flow_scope_key,
+          element_name: element_name,
+          assignee: Map.get(element_def, :assignee, :unasigned),
+          state: :active,
+          candidate_groups: Map.get(element_def, :candidate_groups, [])
+        }
+        | current_user_tasks
+      ]
+
+      %{engine | user_tasks: next_user_tasks}
+    end)
+    |> then(fn engine ->
+      next_reverse_audit_log =
+        for state <- [:element_activating, :element_activated],
+            reduce: engine.reverse_audit_log do
+          reverse_audit_log ->
+            [
+              %{
+                state: state,
+                element_id: element_id,
+                element_instance_key: element_instance_key,
+                flow_scope_key: flow_scope_key,
+                element_name: element_name,
+                element_type: :user_task
+              }
+              | reverse_audit_log
+            ]
+        end
+
+      %{engine | reverse_audit_log: next_reverse_audit_log}
+    end)
   end
 
   defp get_and_update_next_key!(engine) do
@@ -298,6 +320,19 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   end
 
   def audit_log(engine), do: Enum.reverse(engine.reverse_audit_log)
+
+  def user_tasks_stream(engine) do
+    Stream.map(engine.user_tasks, fn user_task ->
+      %{
+        assignee: Map.fetch!(user_task, :assignee),
+        element_id: Map.fetch!(user_task, :element_id),
+        element_instance_key: Map.fetch!(user_task, :key),
+        name: Map.fetch!(user_task, :element_name),
+        state: Map.fetch!(user_task, :state),
+        candidate_groups: Map.fetch!(user_task, :candidate_groups)
+      }
+    end)
+  end
 
   def process_definitions_stream(engine) do
     Stream.flat_map(engine.process_definition_deployments, fn {_, process_definition_deployments} ->

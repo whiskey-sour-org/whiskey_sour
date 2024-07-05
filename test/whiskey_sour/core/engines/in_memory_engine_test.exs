@@ -66,7 +66,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
     end
   end
 
-  describe "start w/ order_process" do
+  describe "create_instance w/ order_process" do
     setup do
       definition =
         [id: "order_process", name: "Order Processing"]
@@ -160,6 +160,26 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  element_type: :user_task
                }
              ] = audit_log
+    end
+
+    test "should create review_order user_task", %{definition: definition} do
+      user_tasks =
+        InMemoryEngine.new()
+        |> InMemoryEngine.run(EngineAlgebra.deploy_definition(definition: definition))
+        |> InMemoryEngine.run(EngineAlgebra.create_instance(bpmn_process_id: definition.id))
+        |> InMemoryEngine.user_tasks_stream()
+        |> Enum.to_list()
+
+      assert [
+               %{
+                 assignee: "user1",
+                 candidate_groups: [],
+                 element_id: "review_order",
+                 element_instance_key: _review_order_element_instance_key,
+                 name: "Review Order",
+                 state: :active
+               }
+             ] = user_tasks
     end
   end
 
