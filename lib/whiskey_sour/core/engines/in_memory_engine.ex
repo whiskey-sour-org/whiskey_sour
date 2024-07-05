@@ -358,4 +358,23 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
       end
     end)
   end
+
+  defimpl Collectable do
+    def into(engine) do
+      collector_fun = fn
+        engine, {:cont, free} ->
+          __impl__(:for).run(engine, free)
+
+        engine, :done ->
+          engine
+
+        _engine, :halt ->
+          :ok
+      end
+
+      initial_acc = engine
+
+      {initial_acc, collector_fun}
+    end
+  end
 end
