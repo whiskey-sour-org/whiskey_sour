@@ -58,7 +58,10 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
         state: :active
       )
 
-    do_run(next_engine, Free.return({:ok, process_instance}))
+    next_functor =
+      EngineFunctor.new(:activate_start_event, %{process_instance: process_instance})
+
+    do_run(next_engine, Free.lift(next_functor))
   end
 
   defp do_run(engine, %Free{functor: %EngineFunctor{operation: :activate_start_event, args: args}}) do

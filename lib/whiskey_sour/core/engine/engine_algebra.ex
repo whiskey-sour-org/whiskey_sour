@@ -8,19 +8,10 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
 
     Free.bind(fetch_process_definition_key(bpmn_process_id: bpmn_process_id), fn
       {:ok, %{process_key: process_key}} ->
-        Free.bind(activate_process(bpmn_process_id: bpmn_process_id, process_key: process_key), fn
-          {:ok, process_instance} ->
-            Free.bind(
-              activate_start_event(process_instance: process_instance),
-              fn
-                {:ok, process_instance} ->
-                  Free.return({:ok, process_instance})
-
-                {:error, _reason} = error ->
-                  Free.return(error)
-              end
-            )
-        end)
+        Free.bind(
+          activate_process(bpmn_process_id: bpmn_process_id, process_key: process_key),
+          &Free.return/1
+        )
 
       {:error, _reason} = error ->
         Free.return(error)
