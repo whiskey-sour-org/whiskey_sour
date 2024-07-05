@@ -166,21 +166,41 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
     end
 
     test "should create review_order user_task", %{definition: definition} do
+      correlation_ref = make_ref()
+
       user_tasks =
         InMemoryEngine.new()
         |> InMemoryEngine.run(EngineAlgebra.deploy_definition(definition: definition))
-        |> InMemoryEngine.run(EngineAlgebra.create_instance(bpmn_process_id: definition.id))
+        |> InMemoryEngine.run(
+          EngineAlgebra.subscribe(
+            to: :process_activated,
+            event_handler: fn event ->
+              send(self(), event)
+            end
+          )
+        )
+        |> InMemoryEngine.run(
+          EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
+        )
         |> InMemoryEngine.user_tasks_stream()
         |> Enum.to_list()
+
+      assert_received %{
+        event_name: :process_activated,
+        event_payload: %{
+          process_instance_key: process_instance_key
+        },
+        correlation_ref: ^correlation_ref
+      }
 
       assert [
                %{
                  assignee: "user1",
                  candidate_groups: [],
                  element_id: "review_order",
-                 element_instance_key: _review_order_element_instance_key,
+                 element_instance_key: _,
                  name: "Review Order",
-                 process_instance_key: _key_1,
+                 process_instance_key: ^process_instance_key,
                  state: :active
                }
              ] = user_tasks
@@ -318,7 +338,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  assignee: :unassigned,
                  candidate_groups: [],
                  element_id: "activity_1",
-                 element_instance_key: _key_4,
+                 element_instance_key: _key,
                  name: "Book flight",
                  process_instance_key: ^process_instance_key,
                  state: :active
