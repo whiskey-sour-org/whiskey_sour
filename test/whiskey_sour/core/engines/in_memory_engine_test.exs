@@ -169,19 +169,12 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
       correlation_ref = make_ref()
 
       user_tasks =
-        InMemoryEngine.new()
-        |> InMemoryEngine.run(EngineAlgebra.deploy_definition(definition: definition))
-        |> InMemoryEngine.run(
-          EngineAlgebra.subscribe(
-            to: :process_activated,
-            event_handler: fn event ->
-              send(self(), event)
-            end
-          )
-        )
-        |> InMemoryEngine.run(
+        [
+          EngineAlgebra.deploy_definition(definition: definition),
+          EngineAlgebra.subscribe(to: :process_activated, event_handler: &send(self(), &1)),
           EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
-        )
+        ]
+        |> Enum.reduce(InMemoryEngine.new(), &InMemoryEngine.run(&2, &1))
         |> InMemoryEngine.user_tasks_stream()
         |> Enum.to_list()
 
@@ -309,19 +302,12 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
       correlation_ref = make_ref()
 
       user_tasks =
-        InMemoryEngine.new()
-        |> InMemoryEngine.run(EngineAlgebra.deploy_definition(definition: definition))
-        |> InMemoryEngine.run(
-          EngineAlgebra.subscribe(
-            to: :process_activated,
-            event_handler: fn event ->
-              send(self(), event)
-            end
-          )
-        )
-        |> InMemoryEngine.run(
+        [
+          EngineAlgebra.deploy_definition(definition: definition),
+          EngineAlgebra.subscribe(to: :process_activated, event_handler: &send(self(), &1)),
           EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
-        )
+        ]
+        |> Enum.reduce(InMemoryEngine.new(), &InMemoryEngine.run(&2, &1))
         |> InMemoryEngine.user_tasks_stream()
         |> Enum.to_list()
 
