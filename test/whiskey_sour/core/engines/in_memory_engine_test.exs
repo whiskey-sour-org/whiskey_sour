@@ -24,13 +24,14 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
     test "should publish `process_deployed` event", %{definition: definition} do
       correlation_ref = make_ref()
 
-      Enum.into(
-        [
-          EngineAlgebra.subscribe(to: :process_deployed, event_handler: &send(self(), &1)),
-          EngineAlgebra.deploy_definition(definition: definition, correlation_ref: correlation_ref)
-        ],
-        InMemoryEngine.new()
-      )
+      _engine =
+        Enum.into(
+          [
+            EngineAlgebra.subscribe(to: :process_deployed, event_handler: &send(self(), &1)),
+            EngineAlgebra.deploy_definition(definition: definition, correlation_ref: correlation_ref)
+          ],
+          InMemoryEngine.new()
+        )
 
       assert_received %{
         event_name: :process_deployed,
