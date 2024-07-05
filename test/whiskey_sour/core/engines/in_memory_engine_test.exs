@@ -25,13 +25,9 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
       correlation_ref = make_ref()
 
       _engine =
-        Enum.into(
-          [
-            EngineAlgebra.subscribe(to: :process_deployed, event_handler: &send(self(), &1)),
-            EngineAlgebra.deploy_definition(definition: definition, correlation_ref: correlation_ref)
-          ],
-          InMemoryEngine.new()
-        )
+        new_engine()
+        ~> EngineAlgebra.subscribe(to: :process_deployed, event_handler: &send(self(), &1))
+        ~> EngineAlgebra.deploy_definition(definition: definition, correlation_ref: correlation_ref)
 
       assert_received %{
         event_name: :process_deployed,
@@ -50,13 +46,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
     end
 
     test "should update `process_definitions_stream`", %{definition: definition} do
-      engine =
-        Enum.into(
-          [
-            EngineAlgebra.deploy_definition(definition: definition)
-          ],
-          InMemoryEngine.new()
-        )
+      engine = new_engine() ~> EngineAlgebra.deploy_definition(definition: definition)
 
       assert [
                %{
@@ -65,7 +55,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  version: 1,
                  bpmn_process_id: "order_process"
                }
-             ] = engine |> InMemoryEngine.process_definitions_stream() |> Enum.to_list()
+             ] = process_definitions(engine)
     end
   end
 
@@ -85,13 +75,9 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
 
     test "should return expected workflow audit log", %{definition: definition} do
       engine =
-        Enum.into(
-          [
-            EngineAlgebra.deploy_definition(definition: definition),
-            EngineAlgebra.create_instance(bpmn_process_id: definition.id)
-          ],
-          InMemoryEngine.new()
-        )
+        new_engine()
+        ~> EngineAlgebra.deploy_definition(definition: definition)
+        ~> EngineAlgebra.create_instance(bpmn_process_id: definition.id)
 
       assert [
                %{
@@ -165,21 +151,17 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  element_name: "Review Order",
                  element_type: :user_task
                }
-             ] = InMemoryEngine.audit_log(engine)
+             ] = audit_log(engine)
     end
 
     test "should create review_order user_task", %{definition: definition} do
       correlation_ref = make_ref()
 
       engine =
-        Enum.into(
-          [
-            EngineAlgebra.deploy_definition(definition: definition),
-            EngineAlgebra.subscribe(to: :process_activated, event_handler: &send(self(), &1)),
-            EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
-          ],
-          InMemoryEngine.new()
-        )
+        new_engine()
+        ~> EngineAlgebra.deploy_definition(definition: definition)
+        ~> EngineAlgebra.subscribe(to: :process_activated, event_handler: &send(self(), &1))
+        ~> EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
 
       assert_received %{
         event_name: :process_activated,
@@ -199,7 +181,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  process_instance_key: ^process_instance_key,
                  state: :active
                }
-             ] = engine |> InMemoryEngine.user_tasks_stream() |> Enum.to_list()
+             ] = user_tasks(engine)
     end
   end
 
@@ -221,13 +203,9 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
 
     test "should return expected workflow audit log", %{definition: definition} do
       engine =
-        Enum.into(
-          [
-            EngineAlgebra.deploy_definition(definition: definition),
-            EngineAlgebra.create_instance(bpmn_process_id: definition.id)
-          ],
-          InMemoryEngine.new()
-        )
+        new_engine()
+        ~> EngineAlgebra.deploy_definition(definition: definition)
+        ~> EngineAlgebra.create_instance(bpmn_process_id: definition.id)
 
       assert [
                %{
@@ -301,21 +279,17 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  element_name: "Book flight",
                  element_type: :user_task
                }
-             ] = InMemoryEngine.audit_log(engine)
+             ] = audit_log(engine)
     end
 
     test "should create Book flight user_task", %{definition: definition} do
       correlation_ref = make_ref()
 
       engine =
-        Enum.into(
-          [
-            EngineAlgebra.deploy_definition(definition: definition),
-            EngineAlgebra.subscribe(to: :process_activated, event_handler: &send(self(), &1)),
-            EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
-          ],
-          InMemoryEngine.new()
-        )
+        new_engine()
+        ~> EngineAlgebra.deploy_definition(definition: definition)
+        ~> EngineAlgebra.subscribe(to: :process_activated, event_handler: &send(self(), &1))
+        ~> EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
 
       assert_received %{
         event_name: :process_activated,
@@ -335,7 +309,18 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  process_instance_key: ^process_instance_key,
                  state: :active
                }
-             ] = engine |> InMemoryEngine.user_tasks_stream() |> Enum.to_list()
+             ] = user_tasks(engine)
     end
   end
+
+  @engine_mod InMemoryEngine
+  def new_engine, do: @engine_mod.new()
+
+  def engine ~> instruction, do: @engine_mod.run(engine, instruction)
+
+  def user_tasks(engine), do: engine |> @engine_mod.user_tasks_stream() |> Enum.to_list()
+
+  def audit_log(engine), do: engine |> @engine_mod.audit_log() |> Enum.to_list()
+
+  def process_definitions(engine), do: engine |> @engine_mod.process_definitions_stream() |> Enum.to_list()
 end
