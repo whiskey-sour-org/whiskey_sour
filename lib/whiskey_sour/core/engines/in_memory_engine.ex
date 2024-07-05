@@ -253,7 +253,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
           element_id: element_id,
           flow_scope_key: flow_scope_key,
           element_name: element_name,
-          assignee: Map.get(element_def, :assignee, :unasigned),
+          assignee: Map.get(element_def, :assignee, :unassigned),
           state: :active,
           candidate_groups: Map.get(element_def, :candidate_groups, [])
         }

@@ -283,5 +283,25 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                }
              ] = audit_log
     end
+
+    test "should create Book flight user_task", %{definition: definition} do
+      user_tasks =
+        InMemoryEngine.new()
+        |> InMemoryEngine.run(EngineAlgebra.deploy_definition(definition: definition))
+        |> InMemoryEngine.run(EngineAlgebra.create_instance(bpmn_process_id: definition.id))
+        |> InMemoryEngine.user_tasks_stream()
+        |> Enum.to_list()
+
+      assert [
+               %{
+                 assignee: :unassigned,
+                 candidate_groups: [],
+                 element_id: "activity_1",
+                 element_instance_key: _key_4,
+                 name: "Book flight",
+                 state: :active
+               }
+             ] = user_tasks
+    end
   end
 end
