@@ -1,6 +1,13 @@
 defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   @moduledoc """
-  The `InMemoryEngine` module provides an in-memory engine for executing process instances.
+  The `InMemoryEngine` module provides an in-memory engine for executing and managing workflow instances.
+
+  ## Features
+
+  - Deploy BPMN process definitions.
+  - Create and manage workflow instances.
+  - Subscribe to and publish workflow events.
+  - Maintain audit logs and track user tasks.
   """
 
   alias WhiskeySour.Core.Engine.EngineFunctor
@@ -10,6 +17,9 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
   defstruct ~w(reverse_audit_log unique_key_generator_fun event_subscriptions process_definition_deployments user_tasks)a
 
+  @doc """
+  Creates a new instance of the InMemoryEngine.
+  """
   @spec new() :: %WhiskeySour.Core.Engines.InMemoryEngine{
           event_subscriptions: %{},
           process_definition_deployments: %{},
