@@ -1,5 +1,11 @@
 defmodule WhiskeySour.Core.Engine.EngineAlgebra do
-  @moduledoc false
+  @moduledoc """
+  Defines the algebraic operations for the workflow engine using Free Monads.
+
+  This module provides functions to deploy process definitions, create workflow instances,
+  activate processes, and manage event subscriptions. These operations can be composed
+  to build complex workflow behaviors.
+  """
   alias WhiskeySour.Core.Engine.EngineFunctor
   alias WhiskeySour.Core.Free
 
