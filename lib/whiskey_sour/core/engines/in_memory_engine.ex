@@ -275,44 +275,43 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
     engine
     |> get_and_update_next_key!()
-    |> then(fn {user_task_key, engine} ->
-      current_user_tasks = engine.user_tasks
+    |> update_user_tasks(element_id, element_name, flow_scope_key, element_def)
+    |> update_audit_log(element_id, element_instance_key, flow_scope_key, element_name, :user_task)
+  end
 
-      next_user_tasks = [
-        %{
-          key: user_task_key,
-          element_id: element_id,
-          element_name: element_name,
-          assignee: Map.get(element_def, :assignee, :unassigned),
-          state: :active,
-          candidate_groups: Map.get(element_def, :candidate_groups, []),
-          process_instance_key: flow_scope_key
-        }
-        | current_user_tasks
-      ]
+  defp update_user_tasks({user_task_key, engine}, element_id, element_name, flow_scope_key, element_def) do
+    user_task = %{
+      key: user_task_key,
+      element_id: element_id,
+      element_name: element_name,
+      assignee: Map.get(element_def, :assignee, :unassigned),
+      state: :active,
+      candidate_groups: Map.get(element_def, :candidate_groups, []),
+      process_instance_key: flow_scope_key
+    }
 
-      %{engine | user_tasks: next_user_tasks}
-    end)
-    |> then(fn engine ->
-      next_reverse_audit_log =
-        for state <- [:element_activating, :element_activated],
-            reduce: engine.reverse_audit_log do
-          reverse_audit_log ->
-            [
-              %{
-                state: state,
-                element_id: element_id,
-                element_instance_key: element_instance_key,
-                flow_scope_key: flow_scope_key,
-                element_name: element_name,
-                element_type: :user_task
-              }
-              | reverse_audit_log
-            ]
-        end
+    %{engine | user_tasks: [user_task | engine.user_tasks]}
+  end
 
-      %{engine | reverse_audit_log: next_reverse_audit_log}
-    end)
+  defp update_audit_log(engine, element_id, element_instance_key, flow_scope_key, element_name, element_type) do
+    next_reverse_audit_log =
+      for state <- [:element_activating, :element_activated],
+          reduce: engine.reverse_audit_log do
+        reverse_audit_log ->
+          [
+            %{
+              state: state,
+              element_id: element_id,
+              element_instance_key: element_instance_key,
+              flow_scope_key: flow_scope_key,
+              element_name: element_name,
+              element_type: element_type
+            }
+            | reverse_audit_log
+          ]
+      end
+
+    %{engine | reverse_audit_log: next_reverse_audit_log}
   end
 
   defp get_and_update_next_key!(engine) do
