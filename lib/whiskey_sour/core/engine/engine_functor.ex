@@ -4,5 +4,11 @@ defmodule WhiskeySour.Core.Engine.EngineFunctor do
   """
   defstruct [:operation, :args]
 
+  @type t :: %__MODULE__{
+          operation: atom(),
+          args: map()
+        }
+
+  @spec new(atom(), keyword()) :: t()
   def new(operation, args \\ []), do: %__MODULE__{operation: operation, args: args}
 end
