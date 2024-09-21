@@ -10,6 +10,13 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
   defstruct ~w(reverse_audit_log unique_key_generator_fun event_subscriptions process_definition_deployments user_tasks)a
 
+  @spec new() :: %WhiskeySour.Core.Engines.InMemoryEngine{
+          event_subscriptions: [],
+          process_definition_deployments: %{},
+          reverse_audit_log: [],
+          unique_key_generator_fun: (-> 1),
+          user_tasks: []
+        }
   def new,
     do: %__MODULE__{
       event_subscriptions: [],
