@@ -353,17 +353,19 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   def audit_log(engine), do: Enum.reverse(engine.reverse_audit_log)
 
   def user_tasks_stream(engine) do
-    Stream.map(engine.user_tasks, fn user_task ->
-      %{
-        assignee: Map.fetch!(user_task, :assignee),
-        candidate_groups: Map.fetch!(user_task, :candidate_groups),
-        element_id: Map.fetch!(user_task, :element_id),
-        element_instance_key: Map.fetch!(user_task, :key),
-        name: Map.fetch!(user_task, :element_name),
-        process_instance_key: Map.fetch!(user_task, :process_instance_key),
-        state: Map.fetch!(user_task, :state)
-      }
-    end)
+    Stream.map(engine.user_tasks, &format_user_task/1)
+  end
+
+  defp format_user_task(user_task) do
+    %{
+      assignee: user_task.assignee,
+      candidate_groups: user_task.candidate_groups,
+      element_id: user_task.element_id,
+      element_instance_key: user_task.key,
+      name: user_task.element_name,
+      process_instance_key: user_task.process_instance_key,
+      state: user_task.state
+    }
   end
 
   def process_definitions_stream(engine) do
