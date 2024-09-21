@@ -29,6 +29,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
         ~> EngineAlgebra.subscribe(to: :process_deployed, event_handler: &send(self(), &1))
         ~> EngineAlgebra.deploy_definition(definition: definition, correlation_ref: correlation_ref)
 
+      # Assert that the `process_deployed` event is received with correct payload
       assert_received %{
         event_name: :process_deployed,
         event_payload: %{
