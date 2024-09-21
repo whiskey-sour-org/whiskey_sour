@@ -11,7 +11,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   defstruct ~w(reverse_audit_log unique_key_generator_fun event_subscriptions process_definition_deployments user_tasks)a
 
   @spec new() :: %WhiskeySour.Core.Engines.InMemoryEngine{
-          event_subscriptions: [],
+          event_subscriptions: %{},
           process_definition_deployments: %{},
           reverse_audit_log: [],
           unique_key_generator_fun: (-> 1),
@@ -19,7 +19,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
         }
   def new,
     do: %__MODULE__{
-      event_subscriptions: [],
+      event_subscriptions: %{},
       process_definition_deployments: %{},
       reverse_audit_log: [],
       unique_key_generator_fun: fn -> 1 end,
@@ -146,8 +146,12 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     event_names = Map.fetch!(args, :event_names)
     event_handler = Map.fetch!(args, :event_handler)
 
-    event_subscription = %{event_names: event_names, event_handler: event_handler}
-    next_engine = %{engine | event_subscriptions: [event_subscription | engine.event_subscriptions]}
+    updated_subscriptions =
+      Enum.reduce(event_names, engine.event_subscriptions, fn event_name, acc ->
+        Map.update(acc, event_name, [event_handler], &[event_handler | &1])
+      end)
+
+    next_engine = %{engine | event_subscriptions: updated_subscriptions}
 
     do_run(next_engine, Free.return(:ok))
   end
@@ -211,8 +215,8 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
   def publish_event(engine, event) do
     engine.event_subscriptions
-    |> Enum.filter(fn subscription -> Enum.member?(subscription.event_names, event.event_name) end)
-    |> Enum.each(fn subscription -> subscription.event_handler.(event) end)
+    |> Map.get(event.event_name, [])
+    |> Enum.each(fn event_handler -> event_handler.(event) end)
   end
 
   defp update_activate_start_event_logs(engine, element_instance_key, flow_scope_key, start_event_def) do
