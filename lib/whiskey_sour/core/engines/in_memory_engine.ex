@@ -43,7 +43,25 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
 
   defp do_run(engine, %Free{functor: nil, value: value}), do: {engine, value}
 
-  defp do_run(engine, %Free{functor: %EngineFunctor{operation: :activate_process, args: args}}) do
+  defp do_run(engine, %Free{functor: {:bind, free, f}}) do
+    {next_engine, next_free} = do_run(engine, free)
+    do_run(next_engine, f.(next_free))
+  end
+
+  defp do_run(engine, %Free{functor: %EngineFunctor{operation: operation, args: args}}) do
+    case operation do
+      :deploy_definition -> handle_deploy_definition(engine, args)
+      :fetch_process_definition_key -> handle_fetch_process_definition_key(engine, args)
+      :activate_process -> handle_activate_process(engine, args)
+      :activate_start_event -> handle_activate_start_event(engine, args)
+      :take_next_flow -> handle_take_next_flow(engine, args)
+      :activate_element -> handle_activate_element(engine, args)
+      :subscribe -> handle_subscribe(engine, args)
+      _ -> {:error, {:unknown_operation, operation}}
+    end
+  end
+
+  defp handle_activate_process(engine, args) do
     %{bpmn_process_id: bpmn_process_id, process_key: process_key, correlation_ref: correlation_ref} = args
     {process_instance_key, next_engine} = get_and_update_next_key!(engine)
 
@@ -91,7 +109,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     do_run(next_engine, Free.lift(next_functor))
   end
 
-  defp do_run(engine, %Free{functor: %EngineFunctor{operation: :activate_start_event, args: args}}) do
+  defp handle_activate_start_event(engine, args) do
     %{process_instance: process_instance} = args
     {key, next_engine} = get_and_update_next_key!(engine)
 
@@ -117,7 +135,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     end
   end
 
-  defp do_run(engine, %Free{functor: %EngineFunctor{operation: :take_next_flow, args: args}}) do
+  defp handle_take_next_flow(engine, args) do
     %{process_instance: process_instance, definition: process_definition, current_element_id: current_element_id} = args
     {key, next_engine} = get_and_update_next_key!(engine)
 
@@ -140,7 +158,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     end
   end
 
-  defp do_run(engine, %Free{functor: %EngineFunctor{operation: :activate_element, args: args}}) do
+  defp handle_activate_element(engine, args) do
     %{process_instance: process_instance, element_def: element_def} = args
     {key, next_engine} = get_and_update_next_key!(engine)
 
@@ -152,7 +170,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     end
   end
 
-  defp do_run(engine, %Free{functor: %EngineFunctor{operation: :subscribe, args: args}}) do
+  defp handle_subscribe(engine, args) do
     event_names = Map.fetch!(args, :event_names)
     event_handler = Map.fetch!(args, :event_handler)
 
@@ -166,7 +184,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     do_run(next_engine, Free.return(:ok))
   end
 
-  defp do_run(engine, %Free{functor: %EngineFunctor{operation: :deploy_definition, args: args}}) do
+  defp handle_deploy_definition(engine, args) do
     %{definition: definition, correlation_ref: correlation_ref} = args
     process_definition_id = definition.id
     {key, next_engine} = get_and_update_next_key!(engine)
@@ -205,9 +223,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     do_run(next_engine, Free.return({:ok, next_engine}))
   end
 
-  defp do_run(engine, %Free{
-         functor: %EngineFunctor{operation: :fetch_process_definition_key, args: %{bpmn_process_id: bpmn_process_id}}
-       }) do
+  defp handle_fetch_process_definition_key(engine, %{bpmn_process_id: bpmn_process_id}) do
     case fetch_lastest_process_assigns(engine, bpmn_process_id: bpmn_process_id) do
       {:ok, assigns} ->
         %{key: process_key} = assigns
@@ -216,11 +232,6 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
       {:error, :process_definition_not_found} = error ->
         do_run(engine, Free.return(error))
     end
-  end
-
-  defp do_run(engine, %Free{functor: {:bind, free, f}}) do
-    {next_engine, next_free} = do_run(engine, free)
-    do_run(next_engine, f.(next_free))
   end
 
   def publish_event(engine, event) do
