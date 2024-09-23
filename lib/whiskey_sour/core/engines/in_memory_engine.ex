@@ -11,6 +11,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
   """
 
   alias WhiskeySour.Core.Engine.EngineFunctor
+  alias WhiskeySour.Core.Engines.InMemoryEngine.Interpreter
   alias WhiskeySour.Core.Free
   alias WhiskeySour.Core.ProcessDefinition
   alias WhiskeySour.Core.ProcessInstance
@@ -59,6 +60,10 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
       :subscribe -> handle_subscribe(engine, args)
       _ -> {:error, {:unknown_operation, operation}}
     end
+  end
+
+  defp do_run(engine, %Free{functor: %EngineFunctor.DeployDefinition{} = functor}) do
+    Interpreter.eval(functor, engine, &do_run/2)
   end
 
   defp handle_activate_process(engine, args) do
@@ -325,7 +330,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngine do
     %{engine | reverse_audit_log: next_reverse_audit_log}
   end
 
-  defp get_and_update_next_key!(engine) do
+  def get_and_update_next_key!(engine) do
     key = engine.unique_key_generator_fun.()
     {key, %{engine | unique_key_generator_fun: fn -> key + 1 end}}
   end

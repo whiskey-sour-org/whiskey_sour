@@ -31,12 +31,7 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
   end
 
   def deploy_definition(opts) do
-    valid_args =
-      opts
-      |> Keyword.validate!([:definition, correlation_ref: nil])
-      |> Map.new()
-
-    Free.lift(EngineFunctor.new(:deploy_definition, valid_args))
+    Free.lift(EngineFunctor.DeployDefinition.new(opts))
   end
 
   def fetch_process_definition_key(opts) do
