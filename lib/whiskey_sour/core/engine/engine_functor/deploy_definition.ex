@@ -12,7 +12,7 @@ defmodule WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition do
 
   defstruct definition: %{}, correlation_ref: nil
 
-  @spec new(keyword()) :: %__MODULE__{}
+  @spec new(keyword()) :: t()
   def new(opts) when is_list(opts) do
     fields = Keyword.validate!(opts, [:definition, correlation_ref: nil])
     struct(__MODULE__, fields)
@@ -23,7 +23,8 @@ defmodule WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition do
     alias WhiskeySour.Core.Engines.InMemoryEngine
 
     @spec eval(DeployDefinition.t(), map(), (map(), any() -> any())) :: any()
-    def eval(%DeployDefinition{definition: definition, correlation_ref: correlation_ref}, engine, next_fun) do
+    def eval(%DeployDefinition{definition: definition, correlation_ref: correlation_ref}, engine, next_fun)
+        when is_map(definition) and is_function(next_fun, 2) do
       process_definition_id = definition.id
       {key, next_engine} = InMemoryEngine.get_and_update_next_key!(engine)
 
