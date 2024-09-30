@@ -24,3 +24,4 @@ whiskey_sour-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+.aider*
