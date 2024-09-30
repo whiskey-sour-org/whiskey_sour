@@ -14,3 +14,12 @@
 
 - `lib/`: Contains the source code for the project.
 - `test/`: Contains the test code for the project.
+
+## Commit Messages
+
+> When writing commit messages, follow these conventions:
+
+- Use the imperative mood in the subject line.
+- Limit the subject line to 50 characters.
+- Separate the subject line from the body with a blank line.
+- Use conventional commits for semantic versioning.
