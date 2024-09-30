@@ -2,17 +2,28 @@ defmodule WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition do
   @moduledoc """
   Represents the operation to deploy a new process definition.
   """
-  defstruct [:definition, :correlation_ref]
 
-  def new(opts) do
+  @type definition :: map()
+  @type correlation_ref :: any()
+  @type t :: %__MODULE__{
+          definition: map(),
+          correlation_ref: any()
+        }
+
+  defstruct definition: %{}, correlation_ref: nil
+
+  @spec new(keyword()) :: %__MODULE__{}
+  def new(opts) when is_list(opts) do
     fields = Keyword.validate!(opts, [:definition, correlation_ref: nil])
     struct(__MODULE__, fields)
   end
 
-  defimpl WhiskeySour.Core.Engines.InMemoryEngine.Interpreter do
+  defimpl WhiskeySour.Core.Engines.InMemoryEngine.Interpreter, for: WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition do
+    alias WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition
     alias WhiskeySour.Core.Engines.InMemoryEngine
 
-    def eval(%{definition: definition, correlation_ref: correlation_ref}, engine, next_fun) do
+    @spec eval(DeployDefinition.t(), map(), (map(), any() -> any())) :: any()
+    def eval(%DeployDefinition{definition: definition, correlation_ref: correlation_ref}, engine, next_fun) do
       process_definition_id = definition.id
       {key, next_engine} = InMemoryEngine.get_and_update_next_key!(engine)
 

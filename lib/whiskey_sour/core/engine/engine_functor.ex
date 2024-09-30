@@ -15,9 +15,12 @@ defmodule WhiskeySour.Core.Engine.EngineFunctor do
   """
   defstruct [:operation, :args]
 
+  @type operation :: :deploy_definition | :create_instance | :activate_process | :activate_start_event | :take_next_flow | :activate_element | :subscribe
+  @type args :: map() | list()
+  
   @type t :: %__MODULE__{
-          operation: atom(),
-          args: map()
+          operation: operation(),
+          args: args()
         }
 
   @spec new(atom(), keyword()) :: t()
