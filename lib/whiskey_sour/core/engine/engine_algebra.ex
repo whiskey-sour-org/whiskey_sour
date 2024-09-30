@@ -11,23 +11,30 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
 
   def create_instance(opts) when is_list(opts) do
     %{
-      bpmn_process_id: bpmn_process_id,
+      process_definition_id: process_definition_id,
       correlation_ref: correlation_ref
     } =
       opts
-      |> Keyword.validate!([:bpmn_process_id, correlation_ref: nil])
+      |> Keyword.validate!([:process_definition_id, correlation_ref: nil])
       |> Map.new()
 
-    Free.bind(fetch_process_definition_key(bpmn_process_id: bpmn_process_id, correlation_ref: correlation_ref), fn
-      {:ok, %{process_key: process_key}} ->
-        Free.bind(
-          activate_process(bpmn_process_id: bpmn_process_id, process_key: process_key, correlation_ref: correlation_ref),
-          &Free.return/1
-        )
+    Free.bind(
+      fetch_process_definition_key(process_definition_id: process_definition_id, correlation_ref: correlation_ref),
+      fn
+        {:ok, %{process_key: process_key}} ->
+          Free.bind(
+            activate_process(
+              process_definition_id: process_definition_id,
+              process_key: process_key,
+              correlation_ref: correlation_ref
+            ),
+            &Free.return/1
+          )
 
-      {:error, _reason} = error ->
-        Free.return(error)
-    end)
+        {:error, _reason} = error ->
+          Free.return(error)
+      end
+    )
   end
 
   def deploy_definition(opts) do
@@ -35,15 +42,13 @@ defmodule WhiskeySour.Core.Engine.EngineAlgebra do
   end
 
   def fetch_process_definition_key(opts) do
-    bpmn_process_id = Keyword.fetch!(opts, :bpmn_process_id)
-
-    Free.lift(EngineFunctor.new(:fetch_process_definition_key, %{bpmn_process_id: bpmn_process_id}))
+    Free.lift(EngineFunctor.FetchProcessDefinitionKey.new(opts))
   end
 
   def activate_process(opts) do
     valid_args =
       opts
-      |> Keyword.validate!([:bpmn_process_id, :process_key, correlation_ref: nil])
+      |> Keyword.validate!([:process_definition_id, :process_key, correlation_ref: nil])
       |> Map.new()
 
     Free.lift(EngineFunctor.new(:activate_process, valid_args))

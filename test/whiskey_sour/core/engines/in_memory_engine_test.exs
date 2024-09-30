@@ -36,7 +36,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
           key: _key,
           workflows: [
             %{
-              bpmn_process_id: "order_process",
+              process_definition_id: "order_process",
               version: 1,
               process_key: _process_key
             }
@@ -54,7 +54,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
                  process_key: _process_key,
                  name: "Order Processing",
                  version: 1,
-                 bpmn_process_id: "order_process"
+                 process_definition_id: "order_process"
                }
              ] = process_definitions(engine)
     end
@@ -78,7 +78,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
       engine =
         new_engine()
         ~> EngineAlgebra.deploy_definition(definition: definition)
-        ~> EngineAlgebra.create_instance(bpmn_process_id: definition.id)
+        ~> EngineAlgebra.create_instance(process_definition_id: definition.id)
 
       assert [
                %{
@@ -162,7 +162,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
         new_engine()
         ~> EngineAlgebra.deploy_definition(definition: definition)
         ~> EngineAlgebra.subscribe(to: :process_activated, event_handler: &send(self(), &1))
-        ~> EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
+        ~> EngineAlgebra.create_instance(process_definition_id: definition.id, correlation_ref: correlation_ref)
 
       assert_received %{
         event_name: :process_activated,
@@ -206,7 +206,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
       engine =
         new_engine()
         ~> EngineAlgebra.deploy_definition(definition: definition)
-        ~> EngineAlgebra.create_instance(bpmn_process_id: definition.id)
+        ~> EngineAlgebra.create_instance(process_definition_id: definition.id)
 
       assert [
                %{
@@ -290,7 +290,7 @@ defmodule WhiskeySour.Core.Engines.InMemoryEngineTest do
         new_engine()
         ~> EngineAlgebra.deploy_definition(definition: definition)
         ~> EngineAlgebra.subscribe(to: :process_activated, event_handler: &send(self(), &1))
-        ~> EngineAlgebra.create_instance(bpmn_process_id: definition.id, correlation_ref: correlation_ref)
+        ~> EngineAlgebra.create_instance(process_definition_id: definition.id, correlation_ref: correlation_ref)
 
       assert_received %{
         event_name: :process_activated,

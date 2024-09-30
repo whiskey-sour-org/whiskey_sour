@@ -21,6 +21,7 @@ defmodule WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition do
   defimpl WhiskeySour.Core.Engines.InMemoryEngine.Interpreter, for: WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition do
     alias WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition
     alias WhiskeySour.Core.Engines.InMemoryEngine
+    alias WhiskeySour.Core.Free
 
     @spec eval(DeployDefinition.t(), map(), (map(), any() -> any())) :: any()
     def eval(%DeployDefinition{definition: definition, correlation_ref: correlation_ref}, engine, next_fun)
@@ -54,12 +55,12 @@ defmodule WhiskeySour.Core.Engine.EngineFunctor.DeployDefinition do
         event_name: :process_deployed,
         event_payload: %{
           key: key,
-          workflows: [%{bpmn_process_id: process_definition_id, version: 1, process_key: key}]
+          workflows: [%{process_definition_id: process_definition_id, version: 1, process_key: key}]
         },
         correlation_ref: correlation_ref
       })
 
-      next_fun.(next_engine, WhiskeySour.Core.Free.return({:ok, next_engine}))
+      next_fun.(next_engine, Free.return({:ok, next_engine}))
     end
   end
 end
